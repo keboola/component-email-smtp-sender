@@ -1,29 +1,83 @@
-# README #
+Email SMTP Sender
+=============
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Description
 
-### What is this repository for? ###
+**Table of contents:**
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+[TOC]
 
-### How do I get set up? ###
+Functionality notes
+===================
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+Prerequisites
+=============
 
-### Contribution guidelines ###
+Get the API token, register application, etc.
 
-* Writing tests
-* Code review
-* Other guidelines
+Features
+========
 
-### Who do I talk to? ###
+| **Feature**             | **Note**                                      |
+|-------------------------|-----------------------------------------------|
+| Generic UI form         | Dynamic UI form                               |
+| Row Based configuration | Allows structuring the configuration in rows. |
+| oAuth                   | oAuth authentication enabled                  |
+| Incremental loading     | Allows fetching data in new increments.       |
+| Backfill mode           | Support for seamless backfill setup.          |
+| Date range filter       | Specify date range.                           |
 
-* Repo owner or admin
-* Other community or team contact
+Supported endpoints
+===================
+
+If you need more endpoints, please submit your request to
+[ideas.keboola.com](https://ideas.keboola.com/)
+
+Configuration
+=============
+
+Param 1
+-------
+
+Param 2
+-------
+
+Output
+======
+
+List of tables, foreign keys, schema.
+
+Development
+-----------
+
+If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to
+your custom path in the `docker-compose.yml` file:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    volumes:
+      - ./:/code
+      - ./CUSTOM_FOLDER:/data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Clone this repository, init the workspace and run the component with following
+command:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+git clone https://bitbucket.org/kds_consulting_team/kds-team.app-email-smtp-sender kds-team.app-email-smtp-sender
+cd kds-team.app-email-smtp-sender
+docker-compose build
+docker-compose run --rm dev
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Run the test suite and lint check using this command:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+docker-compose run --rm test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Integration
+===========
+
+For information about deployment and integration with KBC, please refer to the
+[deployment section of developers
+documentation](https://developers.keboola.com/extend/component/deployment/)

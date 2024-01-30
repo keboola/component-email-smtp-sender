@@ -1,0 +1,1 @@
+application allowing to send emails from keboola platform
