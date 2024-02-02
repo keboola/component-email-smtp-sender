@@ -1,0 +1,2 @@
+Hello {{recipient_name}}!
+Since you are our {{customer_tier}} tier customer, we would like to offer you {{discount_percentage}}% discount on our whole sortiment.
