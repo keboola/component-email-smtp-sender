@@ -1,19 +1,83 @@
 {
   "type": "object",
-  "title": "extractor configuration",
+  "title": "SMTP sender configuration",
   "required": [
-    "print_hello"
+    "sender_email_address",
+    "sender_password",
+    "server_host",
+    "server_port",
+    "use_ssl",
+    "shared_attachments"
   ],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
+    "sender_email_address": {
+      "type": "string",
+      "title": "Sender Email Address",
       "propertyOrder": 1
     },
-    "debug": {
-      "type": "boolean",
-      "title": "Debug",
+    "sender_password": {
+      "type": "string",
+      "title": "Sender App Password",
       "propertyOrder": 2
+    },
+    "server_host": {
+      "type": "string",
+      "title": "SMTP Server Host",
+      "propertyOrder": 3
+    },
+    "server_port": {
+      "type": "integer",
+      "title": "SMTP Server Port (typically 25, 465, 587)",
+      "default": 587,
+      "propertyOrder": 4
+    },
+    "use_ssl": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Use SSL",
+      "description": "if checked - SMTP server connection is established via SSL otherwise TLS is used",
+      "default": true,
+      "propertyOrder": 5
+    },
+    "test_smtp_server_connection": {
+      "type": "button",
+      "format": "sync-action",
+      "propertyOrder": 6,
+      "options": {
+        "async": {
+          "label": "TEST SMTP SERVER CONNECTION",
+          "action": "testConnection"
+        }
+      }
+    },
+    "shared_attachments": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Shared attachments",
+      "description": "if checked - all non-template files in the files input mapping will be attached to the email for tall recipients, otherwise input table expects column `attachments`, which contains semicolon delimited filenames, so that each recipient could recieve a specific subset of attachments",
+      "default": true,
+      "propertyOrder": 7
+    },
+    "template": {
+      "propertyOrder": 8,
+      "type": "string",
+      "title": "Plaintext, or html message template",
+      "format": "textarea",
+      "options": {
+        "input_height": "100px"
+      }
+    },
+    "validate_template": {
+      "type": "button",
+      "format": "sync-action",
+      "description": "Checks, whether all placeholders in your template are contained in the input table",
+      "propertyOrder": 9,
+      "options": {
+        "async": {
+          "label": "VALIDATE TEMPLATE",
+          "action": "validate_template"
+        }
+      }
     }
   }
 }
