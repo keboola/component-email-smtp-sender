@@ -15,6 +15,30 @@
       "title": "Sender Email Address",
       "propertyOrder": 1
     },
+    "validate_sender_email_address": {
+      "type": "button",
+      "format": "sync-action",
+      "description": "Validates email address format",
+      "propertyOrder": 1,
+      "options": {
+        "async": {
+          "label": "VALIDATE EMAIL_ADDRESS",
+          "action": "validate_sender_email_address"
+        }
+      }
+    },
+    "validate_sender_email_deliverability": {
+      "type": "button",
+      "format": "sync-action",
+      "description": "Validates that messages can be sent to this email address",
+      "propertyOrder": 1,
+      "options": {
+        "async": {
+          "label": "VALIDATE EMAIL_ADDRESS",
+          "action": "validate_sender_email_deliverability"
+        }
+      }
+    },
     "sender_password": {
       "type": "string",
       "title": "Sender App Password",
@@ -78,6 +102,14 @@
           "action": "validate_template"
         }
       }
+    },
+    "save_sent_emails": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Save sent emails",
+      "description": "if checked - sent emails detail is output into sent_emails table",
+      "default": true,
+      "propertyOrder": 5
     }
   }
 }

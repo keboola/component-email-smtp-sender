@@ -59,6 +59,7 @@ class Component(ComponentBase):
             raise UserException('template.txt not in input files')
         html_template_path = in_files_paths_by_filename.pop('template.html', None)
 
+        # TODO: handle save_sent_emails
         self.send_emails(
             in_table_path,
             attachments_paths=in_files_paths_by_filename.values(),
@@ -68,13 +69,13 @@ class Component(ComponentBase):
 
     def __init_configuration(self):
         try:
-            self._validate_parameters(self.configuration.parameters, Configuration.get_dataclass_required_parameters(),
-                                      'Row')
+            self._validate_parameters(self.configuration.parameters, REQUIRED_PARAMETERS,'Row')
         except UserException as e:
             raise UserException(f"{e} The configuration is invalid. Please check that you added a configuration row.")
         self.cfg: Configuration = Configuration.fromDict(parameters=self.configuration.parameters)
 
     def init_client(self):
+        # TODO: handle connection through proxy
         self._client = SMTPClient(
             sender_email_address=self.configuration.parameters.get(KEY_SENDER_EMAIL_ADDRESS),
             password=self.configuration.parameters.get(KEY_SENDER_PASSWORD),
@@ -141,20 +142,34 @@ class Component(ComponentBase):
             raise UserException(f"missing placeholders: {missing_placeholders}, missing columns: {missing_columns}")
 
     @sync_action('validate_sender_email_address')
-    def validate_sender_email_address(self) -> bool:
-        return
+    def validate_sender_email_address(self) -> None:
+        from email_validator import validate_email
+        self.__init_configuration()
+        email_address = self.configuration.parameters.sender_email_address
+        validate_email(email_address, check_deliverability=False)
 
-    @sync_action('validate_template')
-    def validate_template(self) -> bool:
-        return
+    @sync_action('validate_sender_email_deliverability')
+    def validate_sender_email_deliverability(self) -> None:
+        from email_validator import validate_email
+        self.__init_configuration()
+        email_address = self.configuration.parameters.sender_email_address
+        validate_email(email_address, check_deliverability=True)
 
     @sync_action('testConnection')
     def test_smtp_server_connection(self) -> None:
-        return
+        self.__init_configuration()
+        self.init_client()
 
-
-    # def __exit__(self):
-    #     self._smtp_server.quit()
+    @sync_action('validate_template')
+    def validate_template(self) -> None:
+        self.__init_configuration()
+        in_tables = self.get_input_tables_definitions()
+        in_table_path = in_tables[0].full_path
+        with open(in_table_path) as in_table:
+            reader = csv.DictReader(in_table)
+            columns = set(reader.fieldnames)
+        template_text = self.configuration.parameters.template_text
+        self._validate_template_text(template_text, columns)
 
 
 """
