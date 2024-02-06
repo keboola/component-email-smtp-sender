@@ -2,114 +2,241 @@
   "type": "object",
   "title": "SMTP sender configuration",
   "required": [
-    "sender_email_address",
-    "sender_password",
-    "server_host",
-    "server_port",
-    "use_ssl",
-    "shared_attachments"
+    "connection_config"
   ],
   "properties": {
-    "sender_email_address": {
-      "type": "string",
-      "title": "Sender Email Address",
-      "propertyOrder": 1
-    },
-    "validate_sender_email_address": {
-      "type": "button",
-      "format": "sync-action",
-      "description": "Validates email address format",
+    "connection_config": {
+      "title": "Connection Config",
+      "type": "object",
       "propertyOrder": 1,
-      "options": {
-        "async": {
-          "label": "VALIDATE EMAIL_ADDRESS",
-          "action": "validate_sender_email_address"
+      "properties": {
+        "sender_email_address": {
+          "type": "string",
+          "title": "Sender Email Address",
+          "propertyOrder": 1
+        },
+        "sender_password": {
+          "type": "string",
+          "title": "Sender App Password",
+          "propertyOrder": 2
+        },
+        "server_host": {
+          "type": "string",
+          "title": "SMTP Server Host",
+          "propertyOrder": 3
+        },
+        "server_port": {
+          "type": "integer",
+          "title": "SMTP Server Port (typically 25, 465, 587)",
+          "default": 587,
+          "propertyOrder": 4
+        },
+        "connection_protocol": {
+          "title": "Connection Protocol",
+          "type": "string",
+          "enum": ["SSL", "TLS"],
+          "propertyOrder": 5
+        },
+        "test_smtp_server_connection": {
+          "type": "button",
+          "format": "sync-action",
+          "propertyOrder": 6,
+          "options": {
+            "async": {
+              "label": "TEST SMTP SERVER CONNECTION",
+              "action": "test_smtp_server_connection"
+            }
+          }
         }
       }
     },
-    "validate_sender_email_deliverability": {
-      "type": "button",
-      "format": "sync-action",
-      "description": "Validates that messages can be sent to this email address",
-      "propertyOrder": 1,
-      "options": {
-        "async": {
-          "label": "VALIDATE EMAIL_ADDRESS",
-          "action": "validate_sender_email_deliverability"
-        }
-      }
-    },
-    "sender_password": {
+    "recipient_email_address_column": {
       "type": "string",
-      "title": "Sender App Password",
+      "watch": {
+        "columns": "_metadata.tables.columns"
+      },
+      "title": "Recipient Email Address Column",
+      "enumSource": "columns",
+      "required": true,
       "propertyOrder": 2
     },
-    "server_host": {
-      "type": "string",
-      "title": "SMTP Server Host",
-      "propertyOrder": 3
-    },
-    "server_port": {
-      "type": "integer",
-      "title": "SMTP Server Port (typically 25, 465, 587)",
-      "default": 587,
-      "propertyOrder": 4
-    },
-    "use_ssl": {
-      "type": "boolean",
-      "format": "checkbox",
-      "title": "Use SSL",
-      "description": "if checked - SMTP server connection is established via SSL otherwise TLS is used",
-      "default": true,
-      "propertyOrder": 5
-    },
-    "test_smtp_server_connection": {
-      "type": "button",
-      "format": "sync-action",
-      "propertyOrder": 6,
-      "options": {
-        "async": {
-          "label": "TEST SMTP SERVER CONNECTION",
-          "action": "testConnection"
+    "subject_config": {
+      "title": "Subject Config",
+      "type": "object",
+      "propertyOrder": 3,
+      "properties": {
+        "subject_source": {
+          "title": "Subject Source",
+          "type": "string",
+          "enum": ["from_table", "using_template"],
+          "options": {
+            "enum_titles": ["From Table", "Using Template"]
+          },
+          "propertyOrder": 1
+        },
+        "subject_column": {
+          "type": "string",
+          "watch": {
+            "columns": "_metadata.tables.columns"
+          },
+          "title": "Subject Column",
+          "propertyOrder": 2,
+          "enumSource": "columns",
+          "required": true,
+          "options": {
+            "dependencies": {"subject_source":  "from_table"}
+          }
+        },
+        "subject_template": {
+          "propertyOrder": 3,
+          "type": "string",
+          "title": "Plaintext subject template",
+          "format": "textarea",
+          "options": {
+            "input_height": "100px",
+            "dependencies": {"subject_source":  "using_template"}
+          }
         }
       }
     },
-    "shared_attachments": {
-      "type": "boolean",
-      "format": "checkbox",
-      "title": "Shared attachments",
-      "description": "if checked - all non-template files in the files input mapping will be attached to the email for tall recipients, otherwise input table expects column `attachments`, which contains semicolon delimited filenames, so that each recipient could recieve a specific subset of attachments",
-      "default": true,
-      "propertyOrder": 7
-    },
-    "template": {
-      "propertyOrder": 8,
-      "type": "string",
-      "title": "Plaintext, or html message template",
-      "format": "textarea",
-      "options": {
-        "input_height": "100px"
-      }
-    },
-    "validate_template": {
-      "type": "button",
-      "format": "sync-action",
-      "description": "Checks, whether all placeholders in your template are contained in the input table",
-      "propertyOrder": 9,
-      "options": {
-        "async": {
-          "label": "VALIDATE TEMPLATE",
-          "action": "validate_template"
+    "message_body_config": {
+      "title": "Message Body Config",
+      "type": "object",
+      "propertyOrder": 4,
+      "properties": {
+        "message_body_source": {
+          "title": "Message Body Source",
+          "type": "string",
+          "enum": ["from_table", "from_template_file", "from_template_definition"],
+          "options": {
+            "enum_titles": ["From Table", "From Template File", "From Template Definition"]
+          },
+          "propertyOrder": 1
+        },
+        "plaintext_template_column": {
+          "type": "string",
+          "watch": {
+            "columns": "_metadata.tables.columns"
+          },
+          "title": "Plaintext Message Template Column",
+          "enumSource": "columns",
+          "required": true,
+          "propertyOrder": 2,
+          "options": {
+            "dependencies": {"message_body_source": "from_table"}
+          }
+        },
+        "html_template_column": {
+          "type": "string",
+          "watch": {
+            "columns": "_metadata.tables.columns"
+          },
+          "title": "HTML Message Template Column",
+          "enumSource": "columns",
+          "required": true,
+          "propertyOrder": 3,
+          "options": {
+            "dependencies": {"message_body_source": "from_table"}
+          }
+        },
+        "plaintext_template_filename": {
+          "type": "string",
+          "title": "Plaintext Template Filename",
+          "propertyOrder": 4,
+          "options": {
+            "dependencies": {"message_body_source": "from_template_file"}
+          }
+        },
+        "html_template_filename": {
+          "type": "string",
+          "title": "HTML Template Filename",
+          "propertyOrder": 5,
+          "options": {
+            "dependencies": {"message_body_source": "from_template_file"}
+          }
+        },
+        "plaintext_template_text": {
+          "propertyOrder": 6,
+          "type": "string",
+          "title": "Plaintext Message Body Template",
+          "format": "textarea",
+          "options": {
+            "input_height": "100px",
+            "dependencies": {"message_body_source": "from_template_definition"}
+          }
+        },
+        "html_template_text": {
+          "propertyOrder": 7,
+          "type": "string",
+          "title": "HTML Message Body Template",
+          "format": "textarea",
+          "options": {
+            "input_height": "100px",
+            "dependencies": {"message_body_source": "from_template_definition"}
+          }
+        },
+        "validate_template": {
+          "type": "button",
+          "format": "sync-action",
+          "description": "Checks, whether all placeholders in your template are contained in the input table",
+          "propertyOrder": 8,
+          "options": {
+            "async": {
+              "label": "VALIDATE TEMPLATE",
+              "action": "validate_template"
+            }
+          }
         }
       }
     },
-    "save_sent_emails": {
+    "attachments_config": {
+      "title": "Attachments Config",
+      "type": "object",
+      "propertyOrder": 5,
+      "properties": {
+        "attachments_source": {
+          "title": "Subject Source",
+          "type": "string",
+          "propertyOrder": 1,
+          "enum": ["from_table", "all_input_files"],
+          "options": {
+            "enum_titles": ["From Table", "All Input Files"]
+          }
+        },
+        "attachments_column": {
+          "type": "string",
+          "watch": {
+            "columns": "_metadata.tables.columns"
+          },
+          "title": "Attachments Column",
+          "enumSource": "columns",
+          "required": true,
+          "propertyOrder": 2,
+          "options": {
+            "dependencies": {"attachments_source":  "from_table"}
+          }
+        }
+      }
+    },
+    "dry_run": {
       "type": "boolean",
       "format": "checkbox",
-      "title": "Save sent emails",
-      "description": "if checked - sent emails detail is output into sent_emails table",
+      "title": "Dry run",
+      "description": "if checked - only builds emails and outputs them, but doesn't send them",
       "default": true,
-      "propertyOrder": 5
+      "propertyOrder": 6
     }
-  }
+  },
+  "validate_config": {
+      "type": "button",
+      "format": "sync-action",
+      "description": "Validates the whole config",
+      "propertyOrder": 7,
+      "options": {
+        "async": {
+          "label": "VALIDATE CONFIG",
+          "action": "validate_config"
+        }
+      }
+    }
 }

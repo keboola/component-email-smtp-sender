@@ -4,10 +4,12 @@ from typing import List, Union
 import re
 import os
 import time
+import json
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 from keboola.component.base import sync_action
+from keboola.component.sync_actions import ValidationResult, MessageType
 from jinja2 import Template
 
 from configuration import Configuration
@@ -18,15 +20,26 @@ KEY_SENDER_EMAIL_ADDRESS = 'sender_email_address'
 KEY_SENDER_PASSWORD = 'sender_password'
 KEY_SERVER_HOST = 'server_host'
 KEY_SERVER_PORT = 'server_port'
-KEY_USE_SSL = 'use_ssl'
-KEY_SHARED_ATTACHMENTS = 'shared_attachments'
+KEY_CONNECTION_PROTOCOL = 'connection_protocol'
 
-# input table fields
+KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN = 'recipient_email_address_column'
+KEY_MESSAGE_BODY_COLUMN = 'message_body_column'
+KEY_SUBJECT_COLUMN = 'subject_column'
+KEY_ATTACHMENTS_COLUMN = 'attachments_column'
+
+KEY_SUBJECT_TEMPLATE = 'subject_template'
+KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
+KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
+
+KEY_DRY_RUN = 'dry_run'
+
 KEY_SUBJECT = 'subject'
+KEY_SUBJECT_SOURCE = 'subject_source'
 KEY_RECIPIENT_EMAIL_ADDRESS = 'recipient_email_address'
-KEY_ATTACHMENTS = 'attachments'
 SLEEP_INTERVAL = 0.1
 
+RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_address', 'subject',
+                        'plaintext_message_body', 'html_message_body', 'error_message')
 
 # list of mandatory parameters => if some is missing,
 REQUIRED_PARAMETERS = {KEY_SENDER_EMAIL_ADDRESS, KEY_SENDER_PASSWORD, KEY_SERVER_HOST, KEY_SERVER_PORT}
@@ -42,6 +55,7 @@ class Component(ComponentBase):
         super().__init__()
         self.cfg = Configuration
         self._client: SMTPClient = None
+        self.results_writer = None
 
     def run(self):
         """
@@ -53,74 +67,114 @@ class Component(ComponentBase):
         in_files = self.get_input_files_definitions()
         in_table_path = in_tables[0].full_path
         in_files_paths_by_filename = {file.name: file.full_path for file in in_files}
+        plaintext_template_filename = self.configuration.parameters.message_body_config[KEY_PLAINTEXT_TEMPLATE_FILENAME]
         try:
-            plaintext_template_path = in_files_paths_by_filename.pop('template.txt')
-        except KeyError as e:
-            raise UserException('template.txt not in input files')
-        html_template_path = in_files_paths_by_filename.pop('template.html', None)
+            plaintext_template_path = in_files_paths_by_filename.pop(plaintext_template_filename)
+        except KeyError:
+            raise UserException(F'{plaintext_template_filename} not in input files')
 
-        # TODO: handle save_sent_emails
-        self.send_emails(
-            in_table_path,
-            attachments_paths=in_files_paths_by_filename.values(),
-            plaintext_template_path=plaintext_template_path,
-            html_template_path=html_template_path,
-            shared_attachments=self.configuration.parameters['shared_attachments'])
+        html_template_name = self.configuration.parameters.message_body_config.get(KEY_HTML_TEMPLATE_FILENAME)
+        html_template_path = in_files_paths_by_filename.pop(html_template_name, None)
+
+        results_table = self.create_out_table_definition('results.csv', write_always=True)
+        with open(results_table.full_path, 'w', newline='') as output_file:
+            self.results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
+            self.results_writer.writeheader()
+            self.send_emails(
+                in_table_path,
+                attachments_paths=in_files_paths_by_filename.values(),
+                plaintext_template_path=plaintext_template_path,
+                html_template_path=html_template_path)
+
+        self.write_manifest(results_table)
 
     def __init_configuration(self):
         try:
-            self._validate_parameters(self.configuration.parameters, REQUIRED_PARAMETERS,'Row')
+            self._validate_parameters(self.configuration.parameters, REQUIRED_PARAMETERS, 'Row')
         except UserException as e:
             raise UserException(f"{e} The configuration is invalid. Please check that you added a configuration row.")
         self.cfg: Configuration = Configuration.fromDict(parameters=self.configuration.parameters)
 
     def init_client(self):
         # TODO: handle connection through proxy
+        use_ssl = self.configuration.parameters.connection_config[KEY_CONNECTION_PROTOCOL] == 'SSL'
         self._client = SMTPClient(
-            sender_email_address=self.configuration.parameters.get(KEY_SENDER_EMAIL_ADDRESS),
-            password=self.configuration.parameters.get(KEY_SENDER_PASSWORD),
-            server_host=self.configuration.parameters.get(KEY_SERVER_HOST),
-            server_port=self.configuration.parameters.get(KEY_SERVER_PORT),
-            use_ssl=self.configuration.parameters.get(KEY_USE_SSL)
+            sender_email_address=self.configuration.parameters.connection_config.get(KEY_SENDER_EMAIL_ADDRESS),
+            password=self.configuration.parameters.connection_config.get(KEY_SENDER_PASSWORD),
+            server_host=self.configuration.parameters.connection_config.get(KEY_SERVER_HOST),
+            server_port=self.configuration.parameters.connection_config.get(KEY_SERVER_PORT),
+            use_ssl=use_ssl
         )
         self._client.init_smtp_server()
 
     def send_emails(self, in_table_path: str, attachments_paths: List[str], plaintext_template_path: str,
-                    html_template_path: Union[str, None] = None, shared_attachments: bool = True) -> None:
+                    html_template_path: Union[str, None] = None) -> None:
 
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
-            validation_columns = set(reader.fieldnames) - {KEY_RECIPIENT_EMAIL_ADDRESS, KEY_SUBJECT, KEY_ATTACHMENTS}
+            # TODO: check validation logic
+            subject_column = None
+            if self.configuration.parameters.subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
+                subject_column = self.configuration.parameters.subject_config.get(KEY_SUBJECT_COLUMN)
+
+            validation_columns = set(reader.fieldnames) - {KEY_RECIPIENT_EMAIL_ADDRESS, subject_column}
             plaintext_template_text = self._read_template_text(plaintext_template_path)
             self._validate_template_text(plaintext_template_text, validation_columns)
+            recipient_email_address_column = self.configuration.parameters.get(KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN)
+            all_attachments = self.configuration.parameters.attachments_config.attachments_source == 'all_input_files'
 
             if html_template_path is not None:
                 html_template_text = self._read_template_text(html_template_path)
                 self._validate_template_text(html_template_text, validation_columns)
 
+            if not all_attachments:
+                attachments_column = self.configuration.parameters.attachments_config.get(KEY_ATTACHMENTS_COLUMN)
+
             for row in reader:
+                if subject_column is not None:
+                    subject_template_text = row[subject_column]
+                else:
+                    subject_template_text = self.configuration.subject_config.get(KEY_SUBJECT_TEMPLATE)
+                rendered_subject = Template(subject_template_text).render(row)
+
                 rendered_plaintext_message = Template(plaintext_template_text).render(row)
                 rendered_html_message = None
-
                 if html_template_path is not None:
                     rendered_html_message = Template(html_template_text).render(row)
 
                 custom_attachments_paths = attachments_paths
-                if not shared_attachments:
+                if not all_attachments:
                     custom_attachments_paths = [
                         os.path.join(self.files_in_path, attachment_filename)
-                        for attachment_filename in row['attachments'].split(';')
+                        for attachment_filename in json.loads(row[attachments_column])
                     ]
 
                 email_ = self._client.build_email(
-                    recipient_email_address=row['recipient_email_address'],
-                    subject=row['subject'],
+                    recipient_email_address=row[recipient_email_address_column],
+                    subject=rendered_subject,
                     attachments_paths=custom_attachments_paths,
                     rendered_plaintext_message=rendered_plaintext_message,
                     rendered_html_message=rendered_html_message
                 )
+
                 logging.info(f"Sending email with subject: `{email_['Subject']}` to `{email_['To']}`")
-                self._client.send_email(email_)
+                status = 'OK'
+                error_message = ''
+                if not self.configuration.parameters.get(KEY_DRY_RUN, False):
+                    try:
+                        self._client.send_email(email_)
+                    except Exception as error_message:
+                        status = 'ERROR'
+
+                self.results_writer.writerow(dict(
+                    status=status,
+                    recipient_email_address=email_['To'],
+                    sender_email_address=email_['From'],
+                    subject=email_['Subject'],
+                    plaintext_message=rendered_plaintext_message,
+                    html_message_body=rendered_html_message,
+                    error_message=error_message
+                ))
                 time.sleep(SLEEP_INTERVAL)
 
     @staticmethod
@@ -136,29 +190,18 @@ class Component(ComponentBase):
 
     def _validate_template_text(self, template_text: str, columns: set) -> None:
         template_placeholders = self._parse_template_placeholders(template_text)
-        missing_placeholders = set(columns) - set(template_placeholders)
         missing_columns = set(template_placeholders) - set(columns)
-        if missing_placeholders.union(missing_columns):
-            raise UserException(f"missing placeholders: {missing_placeholders}, missing columns: {missing_columns}")
+        if missing_columns:
+            raise UserException(f"missing columns: {missing_columns}")
 
-    @sync_action('validate_sender_email_address')
-    def validate_sender_email_address(self) -> None:
-        from email_validator import validate_email
-        self.__init_configuration()
-        email_address = self.configuration.parameters.sender_email_address
-        validate_email(email_address, check_deliverability=False)
-
-    @sync_action('validate_sender_email_deliverability')
-    def validate_sender_email_deliverability(self) -> None:
-        from email_validator import validate_email
-        self.__init_configuration()
-        email_address = self.configuration.parameters.sender_email_address
-        validate_email(email_address, check_deliverability=True)
-
-    @sync_action('testConnection')
+    @sync_action('test_smtp_server_connection')
     def test_smtp_server_connection(self) -> None:
         self.__init_configuration()
-        self.init_client()
+        try:
+            self.init_client()
+            return ValidationResult('OK - Connection established!', MessageType.SUCCESS)
+        except Exception as e:
+            return ValidationResult(f"ERROR - Could not establish connection! reason: {e}", MessageType.SUCCESS)
 
     @sync_action('validate_template')
     def validate_template(self) -> None:
@@ -169,8 +212,32 @@ class Component(ComponentBase):
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
         template_text = self.configuration.parameters.template_text
-        self._validate_template_text(template_text, columns)
+        try:
+            self._validate_template_text(template_text, columns)
+            return ValidationResult('All placeholders are present in the input table', MessageType.SUCCESS)
+        except UserException as e:
+            return ValidationResult(e, MessageType.SUCCESS)
 
+    @sync_action("validate_config")
+    def validate_config(self):
+        # TODO: finish this
+        self.__init_configuration()
+        messages = []
+        try:
+            self.init_client()
+        except Exception as e:
+            messages.append(f"ERROR - Could not establish connection! - {e}")
+
+        validation_result = self.validate_template().message
+        if validation_result != 'All placeholders are present in the input table':
+            messages.append(validation_result)
+
+        in_files = self.get_input_files_definitions()
+        in_files_paths_by_filename = {file.name: file.full_path for file in in_files}
+        # TODO: validate that all attachment files are present in input mapping
+        if messages:
+            error_message = 'Config Invalid!\n' + '\n'.join(messages)
+            return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
 
 """
         Main entrypoint

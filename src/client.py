@@ -77,11 +77,7 @@ class SMTPClient:
         self._smtp_server = server
 
     def _init_ssl_smtp_server(self) -> None:
-        # ssl_context = ssl.create_default_context()
-        # server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port, context=ssl_context)
         server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port)
-        # server.ehlo()
-        # server.connect()
         server.login(self.sender_email_address, self.password)
         self._smtp_server = server
 

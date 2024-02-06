@@ -1,6 +1,6 @@
 import dataclasses
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 
 import dataconf
 from pyhocon import ConfigTree
@@ -31,11 +31,57 @@ class ConfigurationBase:
                 if f.default == dataclasses.MISSING
                 and f.default_factory == dataclasses.MISSING]
 
+
 @dataclass
-class Configuration(ConfigurationBase):
+class ConnectionConfig(ConfigurationBase):
     sender_email_address: str
     sender_password: str
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
-    use_ssl: bool = True
-    shared_attachments: bool = True
+    connection_protocol: bool = True
+
+
+@dataclass
+class SubjectConfig(ConfigurationBase):
+    """
+    subject_source:
+    "In Table" -> "subject_column"
+    "From Template" -> "subject_template"
+    """
+    subject_source: str
+    subject_column: Union[str, None] = None
+    subject_template: Union[str, None] = None
+
+
+@dataclass
+class MessageBodyConfig(ConfigurationBase):
+    """
+    message_body_source:
+    "In Table" -> "plaintext_message_column" + "html_message_column"
+    "Template From File" -> "plaintext_template_filename" + "html_template_filename"
+    "Template Definition" -> "plaintext_template_text" + "html_template_text"
+    """
+    message_body_source: str
+    plaintext_message_column: str
+    html_message_column: str
+
+
+@dataclass
+class AttachmentsConfig(ConfigurationBase):
+    """
+    attachments_source:
+    "All input files"
+    "In Table" -> "attachments_column"
+    """
+    attachments_source: str
+    attachments_column: Union[str, None] = None
+
+
+@dataclass
+class Configuration(ConfigurationBase):
+    connection_config: ConnectionConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    recipient_email_address_column: str = 'recipient_email_address'
+    subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    dry_run: bool = False
