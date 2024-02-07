@@ -29,6 +29,7 @@ class SMTPClient:
     CLient for sending emails
     """
     def __init__(self, sender_email_address, password, server_host, server_port, use_ssl=False):
+        # TODO: add proxy
         self.sender_email_address = sender_email_address
         self.password = password
         self.server_host = server_host
