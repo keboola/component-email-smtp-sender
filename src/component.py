@@ -30,6 +30,7 @@ KEY_ATTACHMENTS_COLUMN = 'attachments_column'
 KEY_SUBJECT_TEMPLATE = 'subject_template'
 KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
+KEY_ATTACHMENTS_SOURCE = 'attachments_source'
 
 KEY_DRY_RUN = 'dry_run'
 
@@ -40,6 +41,8 @@ SLEEP_INTERVAL = 0.1
 
 RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_address', 'subject',
                         'plaintext_message_body', 'html_message_body', 'error_message')
+
+VALID_TEMPLATE_MESSAGE = 'All placeholders are present in the input table'
 
 # list of mandatory parameters => if some is missing,
 REQUIRED_PARAMETERS = {KEY_SENDER_EMAIL_ADDRESS, KEY_SENDER_PASSWORD, KEY_SERVER_HOST, KEY_SERVER_PORT}
@@ -135,6 +138,7 @@ class Component(ComponentBase):
                     subject_template_text = row[subject_column]
                 else:
                     subject_template_text = self.configuration.subject_config.get(KEY_SUBJECT_TEMPLATE)
+
                 rendered_subject = Template(subject_template_text).render(row)
 
                 rendered_plaintext_message = Template(plaintext_template_text).render(row)
@@ -171,7 +175,7 @@ class Component(ComponentBase):
                     recipient_email_address=email_['To'],
                     sender_email_address=email_['From'],
                     subject=email_['Subject'],
-                    plaintext_message=rendered_plaintext_message,
+                    plaintext_message_body=rendered_plaintext_message,
                     html_message_body=rendered_html_message,
                     error_message=error_message
                 ))
@@ -194,6 +198,16 @@ class Component(ComponentBase):
         if missing_columns:
             raise UserException(f"missing columns: {missing_columns}")
 
+    def _get_attachments_filenames_from_input_table(self, in_table_path):
+        attachments_filenames = set()
+        with open(in_table_path) as in_table:
+            reader = csv.DictReader(in_table)
+            attachments_column = self.configuration.parameters.attachments_config.get(KEY_ATTACHMENTS_COLUMN)
+            for row in reader:
+                for attachment_filename in json.loads(row[attachments_column]):
+                    attachments_filenames.add(attachment_filename)
+        return attachments_filenames
+
     @sync_action('test_smtp_server_connection')
     def test_smtp_server_connection(self) -> None:
         self.__init_configuration()
@@ -201,7 +215,7 @@ class Component(ComponentBase):
             self.init_client()
             return ValidationResult('OK - Connection established!', MessageType.SUCCESS)
         except Exception as e:
-            return ValidationResult(f"ERROR - Could not establish connection! reason: {e}", MessageType.SUCCESS)
+            return ValidationResult(f"ERROR - Could not establish connection! - {e}", MessageType.SUCCESS)
 
     @sync_action('validate_template')
     def validate_template(self) -> None:
@@ -214,13 +228,12 @@ class Component(ComponentBase):
         template_text = self.configuration.parameters.template_text
         try:
             self._validate_template_text(template_text, columns)
-            return ValidationResult('All placeholders are present in the input table', MessageType.SUCCESS)
+            return ValidationResult(VALID_TEMPLATE_MESSAGE, MessageType.SUCCESS)
         except UserException as e:
             return ValidationResult(e, MessageType.SUCCESS)
 
     @sync_action("validate_config")
     def validate_config(self):
-        # TODO: finish this
         self.__init_configuration()
         messages = []
         try:
@@ -229,15 +242,25 @@ class Component(ComponentBase):
             messages.append(f"ERROR - Could not establish connection! - {e}")
 
         validation_result = self.validate_template().message
-        if validation_result != 'All placeholders are present in the input table':
+        if validation_result != VALID_TEMPLATE_MESSAGE:
             messages.append(validation_result)
 
-        in_files = self.get_input_files_definitions()
-        in_files_paths_by_filename = {file.name: file.full_path for file in in_files}
-        # TODO: validate that all attachment files are present in input mapping
+        if self.configuration.parameters.attaments_config[KEY_ATTACHMENTS_SOURCE] == 'from_table':
+            in_files = self.get_input_files_definitions()
+            input_filenames = {file.name for file in in_files}
+            in_tables = self.get_input_tables_definitions()
+            in_table_path = in_tables[0].full_path
+            expected_input_filenames = self._get_attachments_filenames_from_input_table(in_table_path)
+            missing_input_filenames = expected_input_filenames - set(input_filenames)
+            if missing_input_filenames:
+                messages.append(f'Missing attachment files: {", ".join(missing_input_filenames)}')
+
         if messages:
             error_message = 'Config Invalid!\n' + '\n'.join(messages)
-            return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
+            return ValidationResult(error_message, MessageType.SUCCESS)
+
+        return ValidationResult('Config Valid!', MessageType.SUCCESS)
+
 
 """
         Main entrypoint
