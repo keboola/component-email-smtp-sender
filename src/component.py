@@ -16,6 +16,7 @@ from configuration import Configuration
 from client import SMTPClient
 
 # configuration variables
+KEY_CONNECTION_CONFIG = 'connection_config'
 KEY_SENDER_EMAIL_ADDRESS = 'sender_email_address'
 KEY_SENDER_PASSWORD = 'sender_password'
 KEY_SERVER_HOST = 'server_host'
@@ -23,6 +24,10 @@ KEY_SERVER_PORT = 'server_port'
 KEY_CONNECTION_PROTOCOL = 'connection_protocol'
 
 KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN = 'recipient_email_address_column'
+
+KEY_SUBJECT_CONFIG = 'subject_config'
+
+KEY_MESSAGE_BODY_CONFIG = 'message_body_config'
 KEY_MESSAGE_BODY_COLUMN = 'message_body_column'
 KEY_SUBJECT_COLUMN = 'subject_column'
 KEY_ATTACHMENTS_COLUMN = 'attachments_column'
@@ -31,6 +36,8 @@ KEY_SUBJECT_TEMPLATE = 'subject_template'
 KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
 KEY_ATTACHMENTS_SOURCE = 'attachments_source'
+
+KEY_ATTACHMENTS_CONFIG = 'attachments_config'
 
 KEY_DRY_RUN = 'dry_run'
 
@@ -45,7 +52,9 @@ RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_addre
 VALID_TEMPLATE_MESSAGE = 'All placeholders are present in the input table'
 
 # list of mandatory parameters => if some is missing,
-REQUIRED_PARAMETERS = {KEY_SENDER_EMAIL_ADDRESS, KEY_SENDER_PASSWORD, KEY_SERVER_HOST, KEY_SERVER_PORT}
+# TODO: fix mandatory params check
+# REQUIRED_PARAMETERS = {KEY_SENDER_EMAIL_ADDRESS, KEY_SENDER_PASSWORD, KEY_SERVER_HOST, KEY_SERVER_PORT}
+REQUIRED_PARAMETERS = set()
 
 # port 465 for SMTP_SSL
 # port 587 for SMTP with TLS
@@ -70,13 +79,13 @@ class Component(ComponentBase):
         in_files = self.get_input_files_definitions()
         in_table_path = in_tables[0].full_path
         in_files_paths_by_filename = {file.name: file.full_path for file in in_files}
-        plaintext_template_filename = self.configuration.parameters.message_body_config[KEY_PLAINTEXT_TEMPLATE_FILENAME]
+        plaintext_template_filename = self.configuration.parameters[KEY_MESSAGE_BODY_CONFIG][KEY_PLAINTEXT_TEMPLATE_FILENAME]
         try:
             plaintext_template_path = in_files_paths_by_filename.pop(plaintext_template_filename)
         except KeyError:
             raise UserException(F'{plaintext_template_filename} not in input files')
 
-        html_template_name = self.configuration.parameters.message_body_config.get(KEY_HTML_TEMPLATE_FILENAME)
+        html_template_name = self.configuration.parameters[KEY_MESSAGE_BODY_CONFIG].get(KEY_HTML_TEMPLATE_FILENAME)
         html_template_path = in_files_paths_by_filename.pop(html_template_name, None)
 
         results_table = self.create_out_table_definition('results.csv', write_always=True)
@@ -100,12 +109,12 @@ class Component(ComponentBase):
 
     def init_client(self):
         # TODO: handle connection through proxy
-        use_ssl = self.configuration.parameters.connection_config[KEY_CONNECTION_PROTOCOL] == 'SSL'
+        use_ssl = self.configuration.parameters[KEY_CONNECTION_CONFIG][KEY_CONNECTION_PROTOCOL] == 'SSL'
         self._client = SMTPClient(
-            sender_email_address=self.configuration.parameters.connection_config.get(KEY_SENDER_EMAIL_ADDRESS),
-            password=self.configuration.parameters.connection_config.get(KEY_SENDER_PASSWORD),
-            server_host=self.configuration.parameters.connection_config.get(KEY_SERVER_HOST),
-            server_port=self.configuration.parameters.connection_config.get(KEY_SERVER_PORT),
+            sender_email_address=self.configuration.parameters[KEY_CONNECTION_CONFIG].get(KEY_SENDER_EMAIL_ADDRESS),
+            password=self.configuration.parameters[KEY_CONNECTION_CONFIG].get(KEY_SENDER_PASSWORD),
+            server_host=self.configuration.parameters[KEY_CONNECTION_CONFIG].get(KEY_SERVER_HOST),
+            server_port=self.configuration.parameters[KEY_CONNECTION_CONFIG].get(KEY_SERVER_PORT),
             use_ssl=use_ssl
         )
         self._client.init_smtp_server()
@@ -114,32 +123,36 @@ class Component(ComponentBase):
                     html_template_path: Union[str, None] = None) -> None:
 
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
+            reader = csv.DictReader(in_table, quotechar='\'')
             # TODO: check validation logic
             subject_column = None
-            if self.configuration.parameters.subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
-                subject_column = self.configuration.parameters.subject_config.get(KEY_SUBJECT_COLUMN)
+            if self.configuration.parameters[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_SOURCE) == 'from_table':
+                subject_column = self.configuration.parameters[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_COLUMN)
 
             validation_columns = set(reader.fieldnames) - {KEY_RECIPIENT_EMAIL_ADDRESS, subject_column}
             plaintext_template_text = self._read_template_text(plaintext_template_path)
             self._validate_template_text(plaintext_template_text, validation_columns)
             recipient_email_address_column = self.configuration.parameters.get(KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN)
-            all_attachments = self.configuration.parameters.attachments_config.attachments_source == 'all_input_files'
+            all_attachments = \
+                self.configuration.parameters[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'all_input_files'
 
             if html_template_path is not None:
                 html_template_text = self._read_template_text(html_template_path)
                 self._validate_template_text(html_template_text, validation_columns)
 
             if not all_attachments:
-                attachments_column = self.configuration.parameters.attachments_config.get(KEY_ATTACHMENTS_COLUMN)
+                attachments_column = self.configuration.parameters[KEY_ATTACHMENTS_CONFIG].get(KEY_ATTACHMENTS_COLUMN)
 
             for row in reader:
                 if subject_column is not None:
                     subject_template_text = row[subject_column]
                 else:
-                    subject_template_text = self.configuration.subject_config.get(KEY_SUBJECT_TEMPLATE)
+                    subject_template_text = self.configuration[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_TEMPLATE)
 
-                rendered_subject = Template(subject_template_text).render(row)
+                try:
+                    rendered_subject = Template(subject_template_text).render(row)
+                except Exception:
+                    rendered_subject = subject_template_text
 
                 rendered_plaintext_message = Template(plaintext_template_text).render(row)
                 rendered_html_message = None
@@ -175,8 +188,8 @@ class Component(ComponentBase):
                     recipient_email_address=email_['To'],
                     sender_email_address=email_['From'],
                     subject=email_['Subject'],
-                    plaintext_message_body=rendered_plaintext_message,
-                    html_message_body=rendered_html_message,
+                    plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
+                    html_message_body=rendered_html_message.replace('\n', '<newline>'),
                     error_message=error_message
                 ))
                 time.sleep(SLEEP_INTERVAL)
@@ -201,8 +214,8 @@ class Component(ComponentBase):
     def _get_attachments_filenames_from_input_table(self, in_table_path):
         attachments_filenames = set()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            attachments_column = self.configuration.parameters.attachments_config.get(KEY_ATTACHMENTS_COLUMN)
+            reader = csv.DictReader(in_table, quotechar='\'')
+            attachments_column = self.configuration.parameters[KEY_ATTACHMENTS_CONFIG].get(KEY_ATTACHMENTS_COLUMN)
             for row in reader:
                 for attachment_filename in json.loads(row[attachments_column]):
                     attachments_filenames.add(attachment_filename)
@@ -223,7 +236,7 @@ class Component(ComponentBase):
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
+            reader = csv.DictReader(in_table, quotechar='\'')
             columns = set(reader.fieldnames)
         template_text = self.configuration.parameters.template_text
         try:

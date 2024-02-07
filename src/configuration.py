@@ -38,7 +38,7 @@ class ConnectionConfig(ConfigurationBase):
     sender_password: str
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
-    connection_protocol: bool = True
+    connection_protocol: str = 'SSL'
 
 
 @dataclass
@@ -57,23 +57,23 @@ class SubjectConfig(ConfigurationBase):
 class MessageBodyConfig(ConfigurationBase):
     """
     message_body_source:
-    "In Table" -> "plaintext_message_column" + "html_message_column"
-    "Template From File" -> "plaintext_template_filename" + "html_template_filename"
-    "Template Definition" -> "plaintext_template_text" + "html_template_text"
+    "from_table" -> "plaintext_message_column" + "html_message_column"
+    "from_template_file" -> "plaintext_template_filename" + "html_template_filename"
+    "from_template_definition" -> "plaintext_template_text" + "html_template_text"
     """
-    message_body_source: str
-    plaintext_message_column: str
-    html_message_column: str
+    message_body_source: str = ''
+    plaintext_message_column: str = 'plaintext_message_body'
+    html_message_column: str = 'html_message_body'
 
 
 @dataclass
 class AttachmentsConfig(ConfigurationBase):
     """
     attachments_source:
-    "All input files"
-    "In Table" -> "attachments_column"
+    "all_input_files"
+    "from_table" -> "attachments_column"
     """
-    attachments_source: str
+    attachments_source: str = 'all_input_files'
     attachments_column: Union[str, None] = None
 
 
