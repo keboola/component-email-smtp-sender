@@ -24,6 +24,8 @@ KEY_SERVER_PORT = 'server_port'
 KEY_PROXY_SERVER_HOST = 'proxy_server_host'
 KEY_PROXY_SERVER_PORT = 'proxy_server_port'
 KEY_CONNECTION_PROTOCOL = 'connection_protocol'
+KEY_PROXY_SERVER_USERNAME = 'proxy_server_username'
+KEY_PROXY_SERVER_PASSWORD = 'proxy_server_password'
 
 KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN = 'recipient_email_address_column'
 
@@ -70,7 +72,6 @@ REQUIRED_PARAMETERS = set()
 
 class Component(ComponentBase):
     """Component for sending emails"""
-
     def __init__(self):
         super().__init__()
         self.cfg = Configuration
@@ -120,6 +121,8 @@ class Component(ComponentBase):
             server_port=connection_config[KEY_SERVER_PORT],
             proxy_server_host=connection_config[KEY_PROXY_SERVER_HOST],
             proxy_server_port=connection_config[KEY_PROXY_SERVER_PORT],
+            proxy_server_username=connection_config[KEY_PROXY_SERVER_USERNAME],
+            proxy_server_password=connection_config[KEY_PROXY_SERVER_PASSWORD],
             use_ssl=use_ssl
         )
         self._client.init_smtp_server()
