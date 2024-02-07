@@ -7,7 +7,6 @@ from pyhocon import ConfigTree
 
 
 class ConfigurationBase:
-
     @staticmethod
     def fromDict(parameters: dict):
         return dataconf.dict(parameters, Configuration, ignore_unexpected=True)
@@ -31,6 +30,12 @@ class ConfigurationBase:
                 if f.default == dataclasses.MISSING
                 and f.default_factory == dataclasses.MISSING]
 
+    def __getitem__(self, item, default=None):
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        return self.__getitem__(item, default)
+
 
 @dataclass
 class ConnectionConfig(ConfigurationBase):
@@ -38,6 +43,10 @@ class ConnectionConfig(ConfigurationBase):
     sender_password: str
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
+    proxy_server_host: Union[str, None] = None
+    proxy_server_port: Union[int, None] = None
+    proxy_server_username: Union[str, None] = None
+    proxy_server_password: Union[str, None] = None
     connection_protocol: str = 'SSL'
 
 
@@ -62,8 +71,12 @@ class MessageBodyConfig(ConfigurationBase):
     "from_template_definition" -> "plaintext_template_text" + "html_template_text"
     """
     message_body_source: str = ''
-    plaintext_message_column: str = 'plaintext_message_body'
-    html_message_column: str = 'html_message_body'
+    plaintext_template_column: str = 'plaintext_template_column'
+    html_template_column: str = 'html_template_column'
+    plaintext_template_filename: str = 'plaintext_template_filename'
+    html_template_filename: str = 'html_template_filename'
+    plaintext_template_definition: str = 'plaintext_template_definition'
+    html_template_definition: str = 'html_template_definition'
 
 
 @dataclass

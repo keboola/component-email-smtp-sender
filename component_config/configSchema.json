@@ -97,7 +97,19 @@
             "dependencies": {"subject_source":  "using_template"}
           }
         }
-      }
+      },
+      "validate_subject": {
+          "type": "button",
+          "format": "sync-action",
+          "description": "Checks, whether all placeholders in your subject template are contained in the input table",
+          "propertyOrder": 7,
+          "options": {
+            "async": {
+              "label": "VALIDATE SUBJECT",
+              "action": "validate_subject"
+            }
+          }
+        }
     },
     "message_body_config": {
       "title": "Message Body Config",
@@ -165,8 +177,20 @@
             "dependencies": {"message_body_source": "from_template_definition"}
           }
         },
-        "html_template_text": {
+        "validate_plaintext_template": {
+          "type": "button",
+          "format": "sync-action",
+          "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
           "propertyOrder": 7,
+          "options": {
+            "async": {
+              "label": "VALIDATE PLAINTEXT TEMPLATE",
+              "action": "validate_plaintext_template"
+            }
+          }
+        },
+        "html_template_text": {
+          "propertyOrder": 8,
           "type": "string",
           "title": "HTML Message Body Template",
           "format": "textarea",
@@ -175,15 +199,15 @@
             "dependencies": {"message_body_source": "from_template_definition"}
           }
         },
-        "validate_template": {
+        "validate_html_template": {
           "type": "button",
           "format": "sync-action",
-          "description": "Checks, whether all placeholders in your template are contained in the input table",
-          "propertyOrder": 8,
+          "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+          "propertyOrder": 9,
           "options": {
             "async": {
-              "label": "VALIDATE TEMPLATE",
-              "action": "validate_template"
+              "label": "VALIDATE HTML TEMPLATE",
+              "action": "validate_html_template"
             }
           }
         }

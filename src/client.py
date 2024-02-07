@@ -7,6 +7,8 @@ from email.mime.text import MIMEText
 
 import smtplib
 from frozendict import frozendict
+import socket
+import socks
 
 
 EXTENSION_TO_ATTACHMENT_TYPES = frozendict({
@@ -28,12 +30,21 @@ class SMTPClient:
     """
     CLient for sending emails
     """
-    def __init__(self, sender_email_address, password, server_host, server_port, use_ssl=False):
-        # TODO: add proxy
+    def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
+                 proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
+                 proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
+                 use_ssl: bool = False):
         self.sender_email_address = sender_email_address
         self.password = password
         self.server_host = server_host
         self.server_port = server_port
+
+        if proxy_server_host is not None:
+            socks.setdefaultproxy(proxy_type=socks.PROXY_TYPE_SOCKS5, addr=proxy_server_host, port=proxy_server_port,
+                                  username=proxy_server_username, password=proxy_server_password)
+            socket.socket = socks.socksocket
+            socks.wrapmodule(smtplib)
+
         if use_ssl:
             logging.info('Using SSL SMTP server')
             self.init_smtp_server = self._init_ssl_smtp_server
