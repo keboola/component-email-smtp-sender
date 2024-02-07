@@ -19,12 +19,28 @@
     }
   },
   "parameters": {
-    "sender_email_address": "<sender_email_address>",
-    "sender_password": "<sender_app_password>",
-    "server_host": "smtp.gmail.com",
-    "server_port": 465,
-    "use_ssl": true,
-    "shared_attachments": false
+    "connection_config": {
+      "sender_email_address": "<sender_email_address>",
+      "sender_password": "<sender_password>",
+      "server_host": "smtp.gmail.com",
+      "server_port": 465,
+      "connection_protocol": "SSL"
+    },
+    "recipient_email_address_column": "recipient_email_address",
+    "subject_config": {
+      "subject_source": "from_table",
+      "subject_column": "subject"
+    },
+    "message_body_config": {
+      "message_body_source": "from_template_file",
+      "plaintext_template_filename": "template.txt",
+      "html_template_filename": "template.html"
+    },
+    "attachments_config": {
+      "attachments_source": "from_table",
+      "attachments_column": "attachments"
+    },
+    "dry_run": false
   },
   "action":"run",
   "authorization": {

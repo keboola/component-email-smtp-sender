@@ -1,4 +1,4 @@
-"subject","recipient_email_address","customer_tier","discount_percentage","recipient_name","attachments"
-"Hello - custom attachments","samuelhavelka@seznam.cz","gold","30","Sam","test_jpeg.jpeg;test_pdf.pdf"
-"Hi - custom attachments","samuelhavelka@seznam.cz","silver","20","Tom","test_json.json;test_xls.xls"
-"Ola - custom attachments","samuelhavelka@seznam.cz","bronze","10","Peter","test_txt.txt"
+subject,recipient_email_address,customer_tier,discount_percentage,recipient_name,attachments
+Hello {{recipient_name}} - custom attachments,samuelhavelka@seznam.cz,gold,30,Sam,'["test_jpeg.jpeg","test_pdf.pdf"]'
+Hi {{recipient_name}} - custom attachments,samuelhavelka@seznam.cz,silver,20,Tom,'["test_json.json","test_xls.xls"]'
+Ola {{recipient_name}} - custom attachments,samuelhavelka@seznam.cz,bronze,10,Peter,'["test_txt.txt"]'
