@@ -48,6 +48,16 @@
           "default": 587,
           "propertyOrder": 7
         },
+        "proxy_server_username": {
+          "type": "string",
+          "title": "Proxy Server Username",
+          "propertyOrder": 6
+        },
+        "proxy_server_password": {
+          "type": "string",
+          "title": "Proxy Server Password",
+          "propertyOrder": 6
+        },
         "test_smtp_server_connection": {
           "type": "button",
           "format": "sync-action",
