@@ -146,7 +146,7 @@
           "title": "HTML Message Template Column",
           "enumSource": "columns",
           "required": true,
-          "propertyOrder": 3,
+          "propertyOrder": 8,
           "options": {
             "dependencies": {"message_body_source": "from_table"}
           }
@@ -162,7 +162,7 @@
         "html_template_filename": {
           "type": "string",
           "title": "HTML Template Filename",
-          "propertyOrder": 5,
+          "propertyOrder": 8,
           "options": {
             "dependencies": {"message_body_source": "from_template_file"}
           }
