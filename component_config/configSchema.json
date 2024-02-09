@@ -96,17 +96,17 @@
             "input_height": "100px",
             "dependencies": {"subject_source":  "using_template"}
           }
-        }
-      },
-      "validate_subject": {
-          "type": "button",
-          "format": "sync-action",
-          "description": "Checks, whether all placeholders in your subject template are contained in the input table",
-          "propertyOrder": 7,
-          "options": {
-            "async": {
-              "label": "VALIDATE SUBJECT",
-              "action": "validate_subject"
+        },
+        "validate_subject": {
+            "type": "button",
+            "format": "sync-action",
+            "description": "Checks, whether all placeholders in your subject template are contained in the input table",
+            "propertyOrder": 7,
+            "options": {
+              "async": {
+                "label": "VALIDATE SUBJECT",
+                "action": "validate_subject"
+              }
             }
           }
         }
@@ -219,7 +219,7 @@
       "propertyOrder": 5,
       "properties": {
         "attachments_source": {
-          "title": "Subject Source",
+          "title": "Attachments Source",
           "type": "string",
           "propertyOrder": 1,
           "enum": ["from_table", "all_input_files"],
