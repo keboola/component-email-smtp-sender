@@ -54,7 +54,7 @@ KEY_DRY_RUN = 'dry_run'
 SLEEP_INTERVAL = 0.1
 
 RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_address', 'subject',
-                        'plaintext_message_body', 'html_message_body', 'error_message')
+                        'plaintext_message_body', 'html_message_body', 'attachment_filenames', 'error_message')
 
 VALID_CONNECTION_CONFIG_MESSAGE = 'OK - Connection configuration is valid'
 VALID_SUBJECT_MESSAGE = 'OK - All subject placeholders are present in the input table'
@@ -209,6 +209,7 @@ class Component(ComponentBase):
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
                     html_message_body=rendered_html_message.replace('\n', '<newline>'),
+                    attachment_filenames=';'.join(os.path.split(path)[-1] for path in custom_attachments_paths),
                     error_message=error_message
                 ))
                 time.sleep(SLEEP_INTERVAL)
