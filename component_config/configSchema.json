@@ -37,10 +37,21 @@
           "enum": ["SSL", "TLS"],
           "propertyOrder": 5
         },
+        "proxy_server_host": {
+          "type": "string",
+          "title": "Proxy Server Host",
+          "propertyOrder": 6
+        },
+        "proxy_server_port": {
+          "type": "integer",
+          "title": "Proxy Server Port",
+          "default": 587,
+          "propertyOrder": 7
+        },
         "test_smtp_server_connection": {
           "type": "button",
           "format": "sync-action",
-          "propertyOrder": 6,
+          "propertyOrder": 8,
           "options": {
             "async": {
               "label": "TEST SMTP SERVER CONNECTION",
