@@ -111,9 +111,8 @@ class Component(ComponentBase):
         self.cfg: Configuration = Configuration.fromDict(parameters=self.configuration.parameters)
 
     def init_client(self):
-        # TODO: handle connection through proxy
         connection_config = self.cfg[KEY_CONNECTION_CONFIG]
-        use_ssl = self.cfg[KEY_CONNECTION_CONFIG][KEY_CONNECTION_PROTOCOL] == 'SSL'
+        use_ssl = connection_config[KEY_CONNECTION_PROTOCOL] == 'SSL'
         self._client = SMTPClient(
             sender_email_address=connection_config[KEY_SENDER_EMAIL_ADDRESS],
             password=connection_config[KEY_SENDER_PASSWORD],
@@ -129,9 +128,13 @@ class Component(ComponentBase):
 
     def send_emails(self, in_table_path: str, attachments_paths: List[str], html_template_path: Union[str, None] = None) -> None:
         dry_run = self.cfg.get(KEY_DRY_RUN, False)
-        if self.cfg[KEY_MESSAGE_BODY_CONFIG][KEY_MESSAGE_BODY_SOURCE] == 'from_table':
-            plaintext_template_column = self.cfg[KEY_MESSAGE_BODY_CONFIG][KEY_PLAINTEXT_TEMPLATE_COLUMN]
-            html_template_column = self.cfg[KEY_MESSAGE_BODY_CONFIG][KEY_HTML_TEMPLATE_COLUMN]
+        subject_config = self.cfg[KEY_SUBJECT_CONFIG]
+        message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
+        attachments_config = self.cfg[KEY_ATTACHMENTS_CONFIG]
+
+        if message_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_table':
+            plaintext_template_column = message_body_config[KEY_PLAINTEXT_TEMPLATE_COLUMN]
+            html_template_column = message_body_config[KEY_HTML_TEMPLATE_COLUMN]
         else:
             plaintext_template_column = None
             html_template_column = None
@@ -139,11 +142,11 @@ class Component(ComponentBase):
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table, quotechar='\'')
             subject_column = None
-            if self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_SOURCE) == 'from_table':
-                subject_column = self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_COLUMN)
+            if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
+                subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
 
             columns = set(reader.fieldnames)
-            if self.cfg[KEY_MESSAGE_BODY_CONFIG][KEY_MESSAGE_BODY_SOURCE] != 'from_table':
+            if message_body_config[KEY_MESSAGE_BODY_SOURCE] != 'from_table':
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
 
@@ -151,15 +154,15 @@ class Component(ComponentBase):
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
 
-            all_attachments = self.cfg[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'all_input_files'
+            all_attachments = attachments_config[KEY_ATTACHMENTS_SOURCE] == 'all_input_files'
             if not all_attachments:
-                attachments_column = self.cfg[KEY_ATTACHMENTS_CONFIG].get(KEY_ATTACHMENTS_COLUMN)
+                attachments_column = attachments_config.get(KEY_ATTACHMENTS_COLUMN)
 
             for row in reader:
                 if subject_column is not None:
                     subject_template_text = row[subject_column]
                 else:
-                    subject_template_text = self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_TEMPLATE)
+                    subject_template_text = subject_config.get(KEY_SUBJECT_TEMPLATE)
                 self._validate_template_text(subject_template_text, columns)
 
                 try:
@@ -227,7 +230,7 @@ class Component(ComponentBase):
         if missing_columns:
             raise UserException(f"ERROR - missing columns: {missing_columns}")
 
-    def _get_attachments_filenames_from_input_table(self, in_table_path):
+    def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table, quotechar='\'')
@@ -345,7 +348,7 @@ class Component(ComponentBase):
         in_table_path = in_tables[0].full_path
         in_files = self.get_input_files_definitions()
         input_filenames = {file.name for file in in_files}
-        expected_input_filenames = self._get_attachments_filenames_from_input_table(in_table_path)
+        expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
         missing_attachments = expected_input_filenames - set(input_filenames)
         message = VALID_ATTACHMENTS_MESSAGE
         if missing_attachments:
