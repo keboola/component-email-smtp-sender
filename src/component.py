@@ -286,6 +286,9 @@ class Component(ComponentBase):
         except UserException as e:
             return ValidationResult(e, MessageType.SUCCESS)
 
+    def __exit__(self):
+        self._client._smtp_server.close()
+
     @sync_action('test_smtp_server_connection')
     def test_smtp_server_connection(self) -> None:
         self.__init_configuration()
