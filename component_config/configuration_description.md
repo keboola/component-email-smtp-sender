@@ -43,3 +43,15 @@
  - `arbitrary_table_name`
  - columns with names corresponding to placeholder names in your template(s)
 
+## Output Table
+ - `results`
+ **columns:**
+ - `status` - `OK` or `ERROR`
+ - `recipient_email_address` - recipient_email_address
+ - `sender_email_address` - sender_email_address
+ - `subject` - subject
+ - `plaintext_message_body` - plaintext_message_body
+ - `html_message_body` - html_message_body
+ - `attachment_filenames` - attachment_filenames
+ - `error_message` - error_message
+
