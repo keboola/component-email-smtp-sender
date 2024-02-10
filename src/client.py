@@ -2,28 +2,14 @@ import logging
 import os
 from typing import List, Union
 
-from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
+from email import encoders
 
 import smtplib
-from frozendict import frozendict
 import socket
 import socks
-
-
-EXTENSION_TO_ATTACHMENT_TYPES = frozendict({
-    'txt': ('text', 'plain'),
-    'json': ('text', 'json'),
-    'csv': ('text', 'csv'),
-    'xlsx': ('text', 'xlsx'),
-    'xls': ('text', 'xls'),
-    'jpg': ('image', 'jpeg'),
-    'jpeg': ('image', 'jpeg'),
-    'png': ('image', 'png'),
-    'pdf': ('application', 'pdf')
-})
-ALLOWED_EXTENSIONS = set(EXTENSION_TO_ATTACHMENT_TYPES.keys())
-# TODO: handle attachment extension validation
 
 
 class SMTPClient:
@@ -56,27 +42,27 @@ class SMTPClient:
 
     def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
                     rendered_html_message: Union[str, None] = None,
-                    attachments_paths: List[str] = None) -> EmailMessage:
+                    attachments_paths: List[str] = None) -> MIMEMultipart:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist)
         """
-        email_ = EmailMessage()
+        email_ = MIMEMultipart()
         email_['From'] = self.sender_email_address
         email_['To'] = recipient_email_address
         email_['Subject'] = subject
-        email_.set_content(MIMEText(rendered_plaintext_message, 'plain'))
-
+        email_.attach(MIMEText(rendered_plaintext_message, 'plain'))
         if rendered_html_message is not None:
-            email_.add_alternative(rendered_html_message, subtype='html')
+            email_.attach(MIMEText(rendered_html_message, 'html'))
 
         if attachments_paths is not None:
             for attachment_path in attachments_paths:
                 with open(attachment_path, 'rb') as file:
-                    file_data = file.read()
+                    attachment = MIMEBase('application', 'octet-stream')
+                    attachment.set_payload(file.read())
+                    encoders.encode_base64(attachment)
                     file_name = os.path.split(attachment_path)[-1]
-                    name, _, extension = attachment_path.rpartition('.')
-                    main_type, sub_type = EXTENSION_TO_ATTACHMENT_TYPES[extension]
-                    email_.add_attachment(file_data, maintype=main_type, subtype=sub_type, filename=file_name)
+                    attachment.add_header('Content-Disposition', f'attachment; filename={file_name}')
+                    email_.attach(attachment)
         return email_
 
     def _init_tls_smtp_server(self) -> None:
@@ -93,8 +79,8 @@ class SMTPClient:
         server.login(self.sender_email_address, self.password)
         self._smtp_server = server
 
-    def _send_email_via_tls_server(self, email: EmailMessage) -> None:
+    def _send_email_via_tls_server(self, email: MIMEMultipart) -> None:
         self._smtp_server.sendmail(self.sender_email_address, email['To'], email)
 
-    def _send_email_via_ssl_server(self, email: EmailMessage) -> None:
+    def _send_email_via_ssl_server(self, email: MIMEMultipart) -> None:
         self._smtp_server.send_message(email)

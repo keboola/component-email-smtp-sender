@@ -37,8 +37,7 @@
 
 **Dry Run** - if checked - emails are built, but not sent
 
- - arbitrary number of attachment files - supported extensions are: `txt`, `json`, `csv`, `xlsx`, `xls`, `jpg`, `jpeg`, `png`, `pdf` - different extensions will be ignored
-
+ - arbitrary number of attachment files - attachment can be of any file type (certain SMTP server providers forbid some types since they are considered potentially dangerous)
 ## Required Input Tables
  - `arbitrary_table_name`
  - columns with names corresponding to placeholder names in your template(s)
