@@ -126,7 +126,8 @@ class Component(ComponentBase):
         )
         self._client.init_smtp_server()
 
-    def send_emails(self, in_table_path: str, attachments_paths: List[str], html_template_path: Union[str, None] = None) -> None:
+    def send_emails(self, in_table_path: str, attachments_paths: List[str],
+                    html_template_path: Union[str, None] = None) -> None:
         dry_run = self.cfg.get(KEY_DRY_RUN, False)
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
