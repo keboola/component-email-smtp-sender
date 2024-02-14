@@ -10,7 +10,6 @@ class ConfigurationBase:
     @staticmethod
     def fromDict(parameters: dict):
         return dataconf.dict(parameters, Configuration, ignore_unexpected=True)
-        pass
 
     @staticmethod
     def _convert_private_value_inv(value: str):
@@ -40,13 +39,13 @@ class ConfigurationBase:
 @dataclass
 class ConnectionConfig(ConfigurationBase):
     sender_email_address: str
-    sender_password: str
+    pswd_sender_password: str
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
     proxy_server_host: Union[str, None] = None
     proxy_server_port: Union[int, None] = None
     proxy_server_username: Union[str, None] = None
-    proxy_server_password: Union[str, None] = None
+    pswd_proxy_server_password: Union[str, None] = None
     connection_protocol: str = 'SSL'
 
 
@@ -54,10 +53,10 @@ class ConnectionConfig(ConfigurationBase):
 class SubjectConfig(ConfigurationBase):
     """
     subject_source:
-    "In Table" -> "subject_column"
-    "From Template" -> "subject_template"
+    "from_table" -> "subject_column"
+    "using_template" -> "subject_template"
     """
-    subject_source: str
+    subject_source: str = 'from_table'
     subject_column: Union[str, None] = None
     subject_template: Union[str, None] = None
 
@@ -66,11 +65,11 @@ class SubjectConfig(ConfigurationBase):
 class MessageBodyConfig(ConfigurationBase):
     """
     message_body_source:
-    "from_table" -> "plaintext_message_column" + "html_message_column"
-    "from_template_file" -> "plaintext_template_filename" + "html_template_filename"
-    "from_template_definition" -> "plaintext_template_text" + "html_template_text"
+    "from_table" -> "plaintext_message_column" + ("html_message_column")
+    "from_template_file" -> "plaintext_template_filename" + ("html_template_filename")
+    "from_template_definition" -> "plaintext_template_definition" + ("html_template_definition")
     """
-    message_body_source: str = ''
+    message_body_source: str = 'from_table'
     use_html_template: bool = False
     plaintext_template_column: str = 'plaintext_template_column'
     html_template_column: str = 'html_template_column'
