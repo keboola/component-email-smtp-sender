@@ -55,3 +55,10 @@
  - `attachment_filenames` - attachment_filenames
  - `error_message` - error_message
 
+## Sync Actions
+ - `TEST SMTP SERVER CONNECTION` - tests, whether connection can be established
+ - `VALIDATE SUBJECT` - validates, that all placeholders in the provided subject template are present in the input table
+ - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided plaintext template are present in the input table
+ - `VALIDATE HTML TEMPLATE` - validates, that all placeholders in the provided HTML template are present in the input table
+ - `VALIDATE ATTACHMENTS` - validates, that all input files are present in the file input mappinng
+ - `VALIDATE CONFIG` - runs all tests and validations above
