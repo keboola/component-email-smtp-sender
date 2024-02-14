@@ -23,6 +23,7 @@
 
 **Message Body Config**
 - **Message Body Source** - `From Table`,`From Template File`, `From Template Definition`
+- **Use HTML Alternative** - Checkbox indicating, whether you want to provide HTML version of message body
 - **Plaintext Message Body Column** - Plaintext message body column name (Message Body Source = `From Table`)
 - **HTML Message Body Column** - HTML message body column name (Message Body Source = `From Table`)
 - **Plaintext Template File** - Plaintext message body template filename (Message Body Source = `From Template File`)

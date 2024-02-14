@@ -71,6 +71,7 @@ class MessageBodyConfig(ConfigurationBase):
     "from_template_definition" -> "plaintext_template_text" + "html_template_text"
     """
     message_body_source: str = ''
+    use_html_template: bool = False
     plaintext_template_column: str = 'plaintext_template_column'
     html_template_column: str = 'html_template_column'
     plaintext_template_filename: str = 'plaintext_template_filename'

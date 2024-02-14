@@ -146,6 +146,14 @@
           },
           "propertyOrder": 1
         },
+        "use_html_template": {
+          "type": "boolean",
+          "format": "checkbox",
+          "title": "Use HTML Template",
+          "description": "if checked - specify HTML Template filename, column or definition",
+          "default": true,
+          "propertyOrder": 7
+        },
         "plaintext_template_column": {
           "type": "string",
           "watch": {
@@ -153,7 +161,6 @@
           },
           "title": "Plaintext Message Template Column",
           "enumSource": "columns",
-          "required": true,
           "propertyOrder": 2,
           "options": {
             "dependencies": {"message_body_source": "from_table"}
@@ -166,10 +173,11 @@
           },
           "title": "HTML Message Template Column",
           "enumSource": "columns",
-          "required": true,
           "propertyOrder": 8,
           "options": {
-            "dependencies": {"message_body_source": "from_table"}
+            "dependencies": {
+              "use_html_template": true,
+              "message_body_source": "from_table"}
           }
         },
         "plaintext_template_filename": {
@@ -185,7 +193,9 @@
           "title": "HTML Template Filename",
           "propertyOrder": 8,
           "options": {
-            "dependencies": {"message_body_source": "from_template_file"}
+            "dependencies": {
+              "use_html_template": true,
+              "message_body_source": "from_template_file"}
           }
         },
         "plaintext_template_text": {
@@ -217,7 +227,9 @@
           "format": "textarea",
           "options": {
             "input_height": "100px",
-            "dependencies": {"message_body_source": "from_template_definition"}
+            "dependencies": {
+              "use_html_template": true,
+              "message_body_source": "from_template_definition"}
           }
         },
         "validate_html_template": {
@@ -229,6 +241,9 @@
             "async": {
               "label": "VALIDATE HTML TEMPLATE",
               "action": "validate_html_template"
+            },
+            "dependencies": {
+              "use_html_template": true
             }
           }
         }

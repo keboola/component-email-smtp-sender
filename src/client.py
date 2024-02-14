@@ -46,13 +46,17 @@ class SMTPClient:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist)
         """
-        email_ = MIMEMultipart()
+        email_ = MIMEMultipart('mixed')
         email_['From'] = self.sender_email_address
         email_['To'] = recipient_email_address
         email_['Subject'] = subject
-        email_.attach(MIMEText(rendered_plaintext_message, 'plain'))
+
+        email_message = MIMEMultipart('alternative')
+        email_message.attach(MIMEText(rendered_plaintext_message, 'plain'))
         if rendered_html_message is not None:
-            email_.attach(MIMEText(rendered_html_message, 'html'))
+            email_message.attach(MIMEText(rendered_html_message, 'html'))
+
+        email_.attach(email_message)
 
         if attachments_paths is not None:
             for attachment_path in attachments_paths:

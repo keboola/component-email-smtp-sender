@@ -35,9 +35,9 @@ KEY_SUBJECT_COLUMN = 'subject_column'
 KEY_SUBJECT_TEMPLATE = 'subject_template'
 
 KEY_MESSAGE_BODY_CONFIG = 'message_body_config'
-KEY_MESSAGE_BODY_COLUMN = 'message_body_column'
-
 KEY_MESSAGE_BODY_SOURCE = 'message_body_source'
+KEY_USE_HTML_TEMPLATE = 'use_html_template'
+KEY_MESSAGE_BODY_COLUMN = 'message_body_column'
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
 KEY_HTML_TEMPLATE_COLUMN = 'html_template_column'
 KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
@@ -89,18 +89,13 @@ class Component(ComponentBase):
         in_table_path = in_tables[0].full_path
         in_files_paths_by_filename = {file.name: file.full_path for file in in_files}
 
-        html_template_name = self.cfg[KEY_MESSAGE_BODY_CONFIG].get(KEY_HTML_TEMPLATE_FILENAME)
-        html_template_path = in_files_paths_by_filename.pop(html_template_name, None)
-
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
             self.send_emails(
                 in_table_path,
-                attachments_paths=in_files_paths_by_filename.values(),
-                html_template_path=html_template_path)
-
+                attachments_paths=in_files_paths_by_filename.values())
         self.write_manifest(results_table)
 
     def __init_configuration(self):
@@ -126,8 +121,7 @@ class Component(ComponentBase):
         )
         self._client.init_smtp_server()
 
-    def send_emails(self, in_table_path: str, attachments_paths: List[str],
-                    html_template_path: Union[str, None] = None) -> None:
+    def send_emails(self, in_table_path: str, attachments_paths: List[str]) -> None:
         dry_run = self.cfg.get(KEY_DRY_RUN, False)
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
@@ -150,8 +144,7 @@ class Component(ComponentBase):
             if message_body_config[KEY_MESSAGE_BODY_SOURCE] != 'from_table':
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
-
-                if html_template_path is not None:
+                if message_body_config[KEY_USE_HTML_TEMPLATE]:
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
 
@@ -173,10 +166,17 @@ class Component(ComponentBase):
 
                 if plaintext_template_column is not None:
                     plaintext_template_text = row[plaintext_template_column]
-                    html_template_text = row[html_template_column]
+                    self._validate_template_text(plaintext_template_text, columns)
+
+                    if message_body_config[KEY_USE_HTML_TEMPLATE]:
+                        html_template_text = row[html_template_column]
+                        self._validate_template_text(html_template_text, columns)
 
                 rendered_plaintext_message = Template(plaintext_template_text).render(row)
-                rendered_html_message = Template(html_template_text).render(row)
+
+                rendered_html_message = None
+                if message_body_config[KEY_USE_HTML_TEMPLATE]:
+                    rendered_html_message = Template(html_template_text).render(row)
 
                 custom_attachments_paths = attachments_paths
                 if not all_attachments:
@@ -203,13 +203,17 @@ class Component(ComponentBase):
                     except Exception as error_message:
                         status = 'ERROR'
 
+                rendered_html_message_writable = ''
+                if rendered_html_message is not None:
+                    rendered_html_message_writable = rendered_html_message.replace('\n', '<newline>')
+
                 self._results_writer.writerow(dict(
                     status=status,
                     recipient_email_address=email_['To'],
                     sender_email_address=email_['From'],
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
-                    html_message_body=rendered_html_message.replace('\n', '<newline>'),
+                    html_message_body=rendered_html_message_writable,
                     attachment_filenames=';'.join(os.path.split(path)[-1] for path in custom_attachments_paths),
                     error_message=error_message
                 ))
