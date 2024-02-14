@@ -25,7 +25,7 @@ class SMTPClient:
         self.server_host = server_host
         self.server_port = server_port
 
-        if proxy_server_host is not None:
+        if proxy_server_host:
             socks.setdefaultproxy(proxy_type=socks.PROXY_TYPE_SOCKS5, addr=proxy_server_host, port=proxy_server_port,
                                   username=proxy_server_username, password=proxy_server_password)
             socket.socket = socks.socksocket
