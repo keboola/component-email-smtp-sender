@@ -200,7 +200,8 @@ class Component(ComponentBase):
                 if not dry_run:
                     try:
                         self._client.send_email(email_)
-                    except Exception as error_message:
+                    except Exception as e:
+                        error_message = str(e)
                         status = 'ERROR'
 
                 rendered_html_message_writable = ''
