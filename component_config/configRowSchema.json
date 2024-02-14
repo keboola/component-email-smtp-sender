@@ -275,6 +275,19 @@
           "options": {
             "dependencies": {"attachments_source":  "from_table"}
           }
+        },
+        "validate_attachments": {
+          "type": "button",
+          "format": "sync-action",
+          "description": "Validates All attachments are present in file input mapping",
+          "propertyOrder": 3,
+          "options": {
+            "async": {
+              "label": "VALIDATE ATTACHMENTS",
+              "action": "validate_attachments"
+            },
+            "dependencies": {"attachments_source":  "from_table"}
+          }
         }
       }
     },
@@ -285,9 +298,8 @@
       "description": "if checked - only builds emails and outputs them, but doesn't send them",
       "default": true,
       "propertyOrder": 6
-    }
-  },
-  "validate_config": {
+    },
+    "validate_config": {
       "type": "button",
       "format": "sync-action",
       "description": "Validates the whole config",
@@ -299,4 +311,6 @@
         }
       }
     }
+  }
+
 }
