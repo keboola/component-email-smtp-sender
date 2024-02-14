@@ -74,7 +74,7 @@
     "recipient_email_address_column": {
       "type": "string",
       "watch": {
-        "columns": "_metadata.tables.columns"
+        "columns": "_metadata.table.columns"
       },
       "title": "Recipient Email Address Column",
       "enumSource": "columns",
@@ -98,7 +98,7 @@
         "subject_column": {
           "type": "string",
           "watch": {
-            "columns": "_metadata.tables.columns"
+            "columns": "_metadata.table.columns"
           },
           "title": "Subject Column",
           "propertyOrder": 2,
@@ -157,7 +157,7 @@
         "plaintext_template_column": {
           "type": "string",
           "watch": {
-            "columns": "_metadata.tables.columns"
+            "columns": "_metadata.table.columns"
           },
           "title": "Plaintext Message Template Column",
           "enumSource": "columns",
@@ -169,7 +169,7 @@
         "html_template_column": {
           "type": "string",
           "watch": {
-            "columns": "_metadata.tables.columns"
+            "columns": "_metadata.table.columns"
           },
           "title": "HTML Message Template Column",
           "enumSource": "columns",
@@ -266,7 +266,7 @@
         "attachments_column": {
           "type": "string",
           "watch": {
-            "columns": "_metadata.tables.columns"
+            "columns": "_metadata.table.columns"
           },
           "title": "Attachments Column",
           "enumSource": "columns",
