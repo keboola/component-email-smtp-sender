@@ -1,6 +1,6 @@
 import csv
 import logging
-from typing import List, Union
+from typing import List
 import re
 import os
 import time
