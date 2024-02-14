@@ -292,8 +292,10 @@ class Component(ComponentBase):
         template_text = self._read_template_text(plaintext)
         try:
             self._validate_template_text(template_text, columns)
+            print(VALID_TEMPLATE_MESSAGE)
             return ValidationResult(VALID_TEMPLATE_MESSAGE, MessageType.SUCCESS)
         except UserException as e:
+            print(e)
             return ValidationResult(e, MessageType.SUCCESS)
 
     def __exit__(self):
@@ -318,10 +320,12 @@ class Component(ComponentBase):
 
     @sync_action('validate_subject')
     def validate_subject(self) -> ValidationResult:
+        self.__init_configuration()
+        subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
-        if self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_SOURCE) == 'from_table':
-            subject_column = self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_COLUMN)
+        if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
+            subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
 
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
@@ -338,11 +342,12 @@ class Component(ComponentBase):
                     if missing_columns:
                         message = 'ERROR - missing placeholders:' + ', '.join(missing_columns)
             else:
-                subject_template_text = self.cfg[KEY_SUBJECT_CONFIG].get(KEY_SUBJECT_TEMPLATE)
+                subject_template_text = subject_config[KEY_SUBJECT_TEMPLATE]
                 try:
                     self._validate_template_text(subject_template_text, columns)
                 except Exception as e:
                     message = str(e)
+        print(message)
         return ValidationResult(message, MessageType.SUCCESS)
 
     @sync_action('validate_attachments')
@@ -360,6 +365,7 @@ class Component(ComponentBase):
         message = VALID_ATTACHMENTS_MESSAGE
         if missing_attachments:
             message = 'ERROR - Missing attachments: ' + ', '.join(missing_attachments)
+        print(message)
         return ValidationResult(message, MessageType.SUCCESS)
 
     @sync_action("validate_config")
