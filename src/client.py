@@ -1,6 +1,5 @@
 import logging
-import os
-from typing import List, Union
+from typing import Union, Dict
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -42,7 +41,7 @@ class SMTPClient:
 
     def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
                     rendered_html_message: Union[str, None] = None,
-                    attachments_paths: List[str] = None) -> MIMEMultipart:
+                    attachments_paths_by_filename: Dict[str, str] = None) -> MIMEMultipart:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist)
         """
@@ -58,14 +57,14 @@ class SMTPClient:
 
         email_.attach(email_message)
 
-        if attachments_paths is not None:
-            for attachment_path in attachments_paths:
+        if attachments_paths_by_filename is not None:
+            for attachment_filename, attachment_path in attachments_paths_by_filename.items():
                 with open(attachment_path, 'rb') as file:
                     attachment = MIMEBase('application', 'octet-stream')
                     attachment.set_payload(file.read())
                     encoders.encode_base64(attachment)
-                    file_name = os.path.split(attachment_path)[-1]
-                    attachment.add_header('Content-Disposition', f'attachment; filename={file_name}')
+                    attachment.add_header(
+                        'Content-Disposition', f'attachment; filename={attachment_filename}')
                     email_.attach(attachment)
         return email_
 

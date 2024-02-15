@@ -99,7 +99,7 @@ class Component(ComponentBase):
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
-            self.send_emails(in_table_path, attachments_paths=list(attachments_paths_by_filename))
+            self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
 
     def _init_configuration(self) -> None:
@@ -122,7 +122,7 @@ class Component(ComponentBase):
         )
         self._client.init_smtp_server()
 
-    def send_emails(self, in_table_path: str, attachments_paths: List[str]) -> None:
+    def send_emails(self, in_table_path: str, attachments_paths_by_filename: Dict[str, str]) -> None:
         dry_run = self.cfg.get(KEY_DRY_RUN, False)
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
@@ -180,17 +180,17 @@ class Component(ComponentBase):
                 if use_html_template:
                     rendered_html_message = Template(html_template_text).render(row)
 
-                custom_attachments_paths = attachments_paths
+                custom_attachments_paths_by_filename = attachments_paths_by_filename
                 if not all_attachments:
-                    custom_attachments_paths = [
-                        os.path.join(self.files_in_path, attachment_filename)
+                    custom_attachments_paths_by_filename = {
+                        attachment_filename: attachments_paths_by_filename[attachment_filename]
                         for attachment_filename in json.loads(row[attachments_column])
-                    ]
+                    }
 
                 email_ = self._client.build_email(
                     recipient_email_address=row[self.cfg[KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN]],
                     subject=rendered_subject,
-                    attachments_paths=custom_attachments_paths,
+                    attachments_paths_by_filename=custom_attachments_paths_by_filename,
                     rendered_plaintext_message=rendered_plaintext_message,
                     rendered_html_message=rendered_html_message
                 )
