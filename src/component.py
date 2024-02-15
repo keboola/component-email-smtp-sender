@@ -82,7 +82,7 @@ class Component(ComponentBase):
         """
         Main execution code
         """
-        self.__init_configuration()
+        self._init_configuration()
         self.init_client()
         in_tables = self.get_input_tables_definitions()
         in_files = self.get_input_files_definitions()
@@ -99,12 +99,9 @@ class Component(ComponentBase):
                 attachments_paths=in_files_paths_by_filename.values())
         self.write_manifest(results_table)
 
-    def __init_configuration(self):
-        try:
-            self._validate_parameters(self.configuration.parameters, REQUIRED_PARAMETERS, 'Row')
-        except UserException as e:
-            raise UserException(f"{e} The configuration is invalid. Please check that you added a configuration row.")
-        self.cfg: Configuration = Configuration.fromDict(parameters=self.configuration.parameters)
+    def _init_configuration(self) -> None:
+        self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
+        self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
     def init_client(self):
         connection_config = self.cfg[KEY_CONNECTION_CONFIG]
@@ -278,7 +275,7 @@ class Component(ComponentBase):
         return template_text
 
     def _validate_template(self, plaintext=True) -> ValidationResult:
-        self.__init_configuration()
+        self._init_configuration()
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
         with open(in_table_path) as in_table:
@@ -302,7 +299,7 @@ class Component(ComponentBase):
 
     @sync_action('test_smtp_server_connection')
     def test_smtp_server_connection(self) -> None:
-        self.__init_configuration()
+        self._init_configuration()
         try:
             self.init_client()
             return ValidationResult('OK - Connection established!', MessageType.SUCCESS)
@@ -319,7 +316,7 @@ class Component(ComponentBase):
 
     @sync_action('validate_subject')
     def validate_subject(self) -> ValidationResult:
-        self.__init_configuration()
+        self._init_configuration()
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
@@ -351,7 +348,7 @@ class Component(ComponentBase):
 
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
-        self.__init_configuration()
+        self._init_configuration()
         if self.cfg[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'all_input_files':
             return ValidationResult(VALID_ATTACHMENTS_MESSAGE, MessageType.SUCCESS)
 
@@ -369,7 +366,7 @@ class Component(ComponentBase):
 
     @sync_action("validate_config")
     def validate_config(self):
-        self.__init_configuration()
+        self._init_configuration()
         messages = []
         try:
             self.init_client()

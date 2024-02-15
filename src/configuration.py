@@ -1,23 +1,37 @@
 import dataclasses
 from dataclasses import dataclass
 from typing import List, Union
+import json
 
-import dataconf
 from pyhocon import ConfigTree
+import dataconf
 
 
 class ConfigurationBase:
     @staticmethod
-    def fromDict(parameters: dict):
-        return dataconf.dict(parameters, Configuration, ignore_unexpected=True)
-        pass
+    def _convert_private_value(value: str):
+        return value.replace('"#', '"pswd_')
 
     @staticmethod
     def _convert_private_value_inv(value: str):
-        if value and value.startswith('pswd_'):
-            return value.replace('pswd_', '#', 1)
+        if value and value.startswith("pswd_"):
+            return value.replace("pswd_", "#", 1)
         else:
             return value
+
+    @classmethod
+    def load_from_dict(cls, configuration: dict):
+        """
+        Initialize the configuration dataclass object from dictionary.
+        Args:
+            configuration: Dictionary loaded from json configuration.
+
+        Returns:
+
+        """
+        json_conf = json.dumps(configuration)
+        json_conf = ConfigurationBase._convert_private_value(json_conf)
+        return dataconf.loads(json_conf, cls, ignore_unexpected=True)
 
     @classmethod
     def get_dataclass_required_parameters(cls) -> List[str]:
@@ -26,16 +40,16 @@ class ConfigurationBase:
         Returns: List[str]
 
         """
-        return [cls._convert_private_value_inv(f.name) for f in dataclasses.fields(cls)
+        return [cls._convert_private_value_inv(f.name)
+                for f in dataclasses.fields(cls)
                 if f.default == dataclasses.MISSING
                 and f.default_factory == dataclasses.MISSING]
 
     def __getitem__(self, item, default=None):
-        return getattr(self, item)
+        return getattr(self, item, default)
 
     def get(self, item, default=None):
-        return self.__getitem__(item, default)
-
+        return getattr(self, item, default)
 
 @dataclass
 class ConnectionConfig(ConfigurationBase):
