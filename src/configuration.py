@@ -51,6 +51,7 @@ class ConfigurationBase:
     def get(self, item, default=None):
         return getattr(self, item, default)
 
+
 @dataclass
 class ConnectionConfig(ConfigurationBase):
     sender_email_address: str
