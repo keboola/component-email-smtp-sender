@@ -128,21 +128,20 @@ class Component(ComponentBase):
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
         attachments_config = self.cfg[KEY_ATTACHMENTS_CONFIG]
 
-        if message_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_table':
-            plaintext_template_column = message_body_config[KEY_PLAINTEXT_TEMPLATE_COLUMN]
-            html_template_column = message_body_config[KEY_HTML_TEMPLATE_COLUMN]
-        else:
-            plaintext_template_column = None
-            html_template_column = None
-
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
+            columns = set(reader.fieldnames)
+
             subject_column = None
             if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
                 subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
 
-            columns = set(reader.fieldnames)
-            if message_body_config[KEY_MESSAGE_BODY_SOURCE] != 'from_table':
+            if message_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_table':
+                plaintext_template_column = message_body_config[KEY_PLAINTEXT_TEMPLATE_COLUMN]
+                html_template_column = message_body_config[KEY_HTML_TEMPLATE_COLUMN]
+            else:
+                plaintext_template_column = None
+                html_template_column = None
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
                 if message_body_config[KEY_USE_HTML_TEMPLATE]:
@@ -262,8 +261,7 @@ class Component(ComponentBase):
         return ValidationResult(message, MessageType.SUCCESS)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
-        if self.cfg is None:
-            self.__init_configuration()
+        """Reads in template either from file, or from config"""
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
         message_body_source = message_body_config[KEY_MESSAGE_BODY_SOURCE]
 
