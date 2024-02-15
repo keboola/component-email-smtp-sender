@@ -135,7 +135,7 @@ class Component(ComponentBase):
             html_template_column = None
 
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             subject_column = None
             if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
                 subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
@@ -240,7 +240,7 @@ class Component(ComponentBase):
     def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             attachments_column = self.cfg[KEY_ATTACHMENTS_CONFIG].get(KEY_ATTACHMENTS_COLUMN)
             for row in reader:
                 for attachment_filename in json.loads(row[attachments_column]):
@@ -283,7 +283,7 @@ class Component(ComponentBase):
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
 
             if self.cfg[KEY_MESSAGE_BODY_CONFIG].get(KEY_MESSAGE_BODY_SOURCE) == 'from_table':
@@ -330,7 +330,7 @@ class Component(ComponentBase):
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
             if subject_column is not None:
                 unique_placeholders = set()
