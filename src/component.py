@@ -1,6 +1,6 @@
 import csv
 import logging
-from typing import List
+from typing import List, Tuple, Union
 import re
 import os
 import time
@@ -10,6 +10,7 @@ from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 from keboola.component.base import sync_action
 from keboola.component.sync_actions import ValidationResult, MessageType
+from keboola.component.dao import FileDefinition
 from jinja2 import Template
 
 from configuration import Configuration
@@ -77,24 +78,28 @@ class Component(ComponentBase):
         self.cfg = Configuration
         self._client: SMTPClient = None
         self._results_writer = None
+        self.plaintext_template_path = None
+        self.html_template_path = None
 
     def run(self):
-        """
-        Main execution code
-        """
         self._init_configuration()
         self.init_client()
         in_tables = self.get_input_tables_definitions()
         in_files = self.get_input_files_definitions()
         in_table_path = in_tables[0].full_path
-        in_files_paths_by_filename = {file.name.replace(f'{file.id}_', ''): file.full_path
-                                      for file in in_files}
+        self.plaintext_template_path, self.html_template_path = self._extract_template_files_full_paths(in_files)
+
+        attachments_paths_by_filename = {
+            file.name.replace(f'{file.id}_', ''): file.full_path
+            for file in in_files
+            if file.full_path not in [self.plaintext_template_path, self.html_template_path]}
+
         # TODO: return write_always=True once we have queue_v2
         results_table = self.create_out_table_definition('results.csv')
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
-            self.send_emails(in_table_path, attachments_paths=list(in_files_paths_by_filename))
+            self.send_emails(in_table_path, attachments_paths=list(attachments_paths_by_filename))
         self.write_manifest(results_table)
 
     def _init_configuration(self) -> None:
@@ -122,6 +127,7 @@ class Component(ComponentBase):
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
         attachments_config = self.cfg[KEY_ATTACHMENTS_CONFIG]
+        use_html_template = message_body_config[KEY_USE_HTML_TEMPLATE]
 
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
@@ -130,16 +136,19 @@ class Component(ComponentBase):
             subject_column = None
             if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
                 subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
+            else:
+                subject_template_text = subject_config[KEY_SUBJECT_TEMPLATE]
+                self._validate_template_text(subject_template_text, columns)
 
             if message_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_table':
                 plaintext_template_column = message_body_config[KEY_PLAINTEXT_TEMPLATE_COLUMN]
-                html_template_column = message_body_config[KEY_HTML_TEMPLATE_COLUMN]
+                html_template_column = message_body_config.get(KEY_HTML_TEMPLATE_COLUMN)
             else:
                 plaintext_template_column = None
                 html_template_column = None
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
-                if message_body_config[KEY_USE_HTML_TEMPLATE]:
+                if use_html_template:
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
 
@@ -150,9 +159,7 @@ class Component(ComponentBase):
             for row in reader:
                 if subject_column is not None:
                     subject_template_text = row[subject_column]
-                else:
-                    subject_template_text = subject_config.get(KEY_SUBJECT_TEMPLATE)
-                self._validate_template_text(subject_template_text, columns)
+                    self._validate_template_text(subject_template_text, columns)
 
                 try:
                     rendered_subject = Template(subject_template_text).render(row)
@@ -163,14 +170,14 @@ class Component(ComponentBase):
                     plaintext_template_text = row[plaintext_template_column]
                     self._validate_template_text(plaintext_template_text, columns)
 
-                    if message_body_config[KEY_USE_HTML_TEMPLATE]:
+                    if html_template_column is not None:
                         html_template_text = row[html_template_column]
                         self._validate_template_text(html_template_text, columns)
 
                 rendered_plaintext_message = Template(plaintext_template_text).render(row)
 
                 rendered_html_message = None
-                if message_body_config[KEY_USE_HTML_TEMPLATE]:
+                if use_html_template:
                     rendered_html_message = Template(html_template_text).render(row)
 
                 custom_attachments_paths = attachments_paths
@@ -214,6 +221,22 @@ class Component(ComponentBase):
                     error_message=error_message
                 ))
                 time.sleep(SLEEP_INTERVAL)
+
+    def _extract_template_files_full_paths(
+            self, in_files: List[FileDefinition]) -> Tuple[Union[str, None], Union[str, None]]:
+        """Extracts full paths for template files if they are provided"""
+        msg_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
+        plaintext_template_path = None
+        html_template_path = None
+        if msg_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_template_file':
+            plaintext_template_filename = msg_body_config[KEY_PLAINTEXT_TEMPLATE_FILENAME]
+            plaintext_template_path = next(file.full_path for file in in_files
+                                           if file.name.endswith(plaintext_template_filename))
+            if msg_body_config[KEY_USE_HTML_TEMPLATE]:
+                html_template_filename = msg_body_config[KEY_HTML_TEMPLATE_FILENAME]
+                html_template_path = next(file.full_path for file in in_files
+                                          if file.name.endswith(html_template_filename))
+        return plaintext_template_path, html_template_path
 
     @staticmethod
     def _read_template_file(template_path: str) -> str:
@@ -261,9 +284,7 @@ class Component(ComponentBase):
         message_body_source = message_body_config[KEY_MESSAGE_BODY_SOURCE]
 
         if message_body_source == 'from_template_file':
-            key_template_filename = KEY_PLAINTEXT_TEMPLATE_FILENAME if plaintext else KEY_HTML_TEMPLATE_FILENAME
-            template_filename = message_body_config[key_template_filename]
-            template_path = os.path.join(self.files_in_path, template_filename)
+            template_path = self.plaintext_template_path if plaintext else self.html_template_path
             template_text = self._read_template_file(template_path)
         elif message_body_source == 'from_template_definition':
             key_template_text = KEY_PLAINTEXT_TEMPLATE_DEFINITION if plaintext else KEY_HTML_TEMPLATE_DEFINITION
@@ -347,8 +368,10 @@ class Component(ComponentBase):
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
         self._init_configuration()
+        message = VALID_ATTACHMENTS_MESSAGE
         if self.cfg[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'all_input_files':
-            return ValidationResult(VALID_ATTACHMENTS_MESSAGE, MessageType.SUCCESS)
+            print(message)
+            return ValidationResult(message, MessageType.SUCCESS)
 
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
@@ -356,7 +379,6 @@ class Component(ComponentBase):
         input_filenames = {file.name for file in in_files}
         expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
         missing_attachments = expected_input_filenames - set(input_filenames)
-        message = VALID_ATTACHMENTS_MESSAGE
         if missing_attachments:
             message = 'ERROR - Missing attachments: ' + ', '.join(missing_attachments)
         print(message)
