@@ -11,7 +11,6 @@
  - **Proxy Server Port** - Proxy Server Host
  - **Proxy Server Username** - Proxy Server Username
  - **Proxy Server Password** - Proxy Server Password
- - 
  - **Connection Protocol** - specifies, whether to connect via SSL or TLS
 
 **Recipient Email Address Column** - Recipient email address column name
