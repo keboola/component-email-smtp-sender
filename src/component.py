@@ -87,8 +87,8 @@ class Component(ComponentBase):
         in_tables = self.get_input_tables_definitions()
         in_files = self.get_input_files_definitions()
         in_table_path = in_tables[0].full_path
-        in_files_paths_by_filename = {file.name.replace(f'{file.id}_', ''): file.full_path for file in in_files}
-
+        in_files_paths_by_filename = {file.name.replace(f'{file.id}_', ''): file.full_path
+                                      for file in in_files}
         # TODO: return write_always=True once we have queue_v2
         results_table = self.create_out_table_definition('results.csv')
         with open(results_table.full_path, 'w', newline='') as output_file:
