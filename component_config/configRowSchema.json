@@ -198,7 +198,7 @@
               "message_body_source": "from_template_file"}
           }
         },
-        "plaintext_template_text": {
+        "plaintext_template_definition": {
           "propertyOrder": 6,
           "type": "string",
           "title": "Plaintext Message Body Template",
@@ -220,7 +220,7 @@
             }
           }
         },
-        "html_template_text": {
+        "html_template_definition": {
           "propertyOrder": 8,
           "type": "string",
           "title": "HTML Message Body Template",
