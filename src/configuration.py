@@ -40,13 +40,13 @@ class ConfigurationBase:
 @dataclass
 class ConnectionConfig(ConfigurationBase):
     sender_email_address: str
-    sender_password: str
+    pswd_sender_password: str
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
     proxy_server_host: Union[str, None] = None
     proxy_server_port: Union[int, None] = None
     proxy_server_username: Union[str, None] = None
-    proxy_server_password: Union[str, None] = None
+    pswd_proxy_server_password: Union[str, None] = None
     connection_protocol: str = 'SSL'
 
 

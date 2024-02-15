@@ -18,14 +18,14 @@ from client import SMTPClient
 
 KEY_CONNECTION_CONFIG = 'connection_config'
 KEY_SENDER_EMAIL_ADDRESS = 'sender_email_address'
-KEY_SENDER_PASSWORD = 'sender_password'
+KEY_SENDER_PASSWORD = 'pswd_sender_password'
 KEY_SERVER_HOST = 'server_host'
 KEY_SERVER_PORT = 'server_port'
 KEY_PROXY_SERVER_HOST = 'proxy_server_host'
 KEY_PROXY_SERVER_PORT = 'proxy_server_port'
 KEY_CONNECTION_PROTOCOL = 'connection_protocol'
 KEY_PROXY_SERVER_USERNAME = 'proxy_server_username'
-KEY_PROXY_SERVER_PASSWORD = 'proxy_server_password'
+KEY_PROXY_SERVER_PASSWORD = 'pswd_proxy_server_password'
 
 KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN = 'recipient_email_address_column'
 
