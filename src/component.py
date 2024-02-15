@@ -1,8 +1,7 @@
 import csv
 import logging
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 import re
-import os
 import time
 import json
 
@@ -217,7 +216,7 @@ class Component(ComponentBase):
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
                     html_message_body=rendered_html_message_writable,
-                    attachment_filenames=';'.join(os.path.split(path)[-1] for path in custom_attachments_paths),
+                    attachment_filenames=';'.join(list(attachments_paths_by_filename)),
                     error_message=error_message
                 ))
                 time.sleep(SLEEP_INTERVAL)
