@@ -122,7 +122,7 @@ class Component(ComponentBase):
         self._client.init_smtp_server()
 
     def send_emails(self, in_table_path: str, attachments_paths_by_filename: Dict[str, str]) -> None:
-        dry_run = self.cfg.get(KEY_DRY_RUN, False)
+        dry_run = self.cfg[KEY_DRY_RUN]
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
         attachments_config = self.cfg[KEY_ATTACHMENTS_CONFIG]
@@ -216,7 +216,7 @@ class Component(ComponentBase):
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
                     html_message_body=rendered_html_message_writable,
-                    attachment_filenames=';'.join(list(attachments_paths_by_filename)),
+                    attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
                     error_message=error_message
                 ))
                 time.sleep(SLEEP_INTERVAL)
