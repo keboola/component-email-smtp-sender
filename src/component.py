@@ -49,6 +49,7 @@ KEY_ATTACHMENTS_CONFIG = 'attachments_config'
 KEY_ATTACHMENTS_SOURCE = 'attachments_source'
 KEY_ATTACHMENTS_COLUMN = 'attachments_column'
 
+KEY_CONTINUE_ON_ERROR = 'continue_on_error'
 KEY_DRY_RUN = 'dry_run'
 
 SLEEP_INTERVAL = 0.1
@@ -60,6 +61,15 @@ VALID_CONNECTION_CONFIG_MESSAGE = 'OK - Connection configuration is valid'
 VALID_SUBJECT_MESSAGE = 'OK - All subject placeholders are present in the input table'
 VALID_TEMPLATE_MESSAGE = 'OK - All template placeholders are present in the input table'
 VALID_ATTACHMENTS_MESSAGE = 'OK - All attachments are present'
+
+general_error_row = {
+    'status': 'ERROR',
+    'recipient_email_address': '',
+    'sender_email_address': '',
+    'subject': '',
+    'plaintext_message_body': '',
+    'html_message_body': '',
+    'attachment_filenames': ''}
 
 # list of mandatory parameters => if some is missing,
 # TODO: fix mandatory params check
@@ -122,6 +132,7 @@ class Component(ComponentBase):
         self._client.init_smtp_server()
 
     def send_emails(self, in_table_path: str, attachments_paths_by_filename: Dict[str, str]) -> None:
+        continue_on_error = self.cfg[KEY_CONTINUE_ON_ERROR]
         dry_run = self.cfg[KEY_DRY_RUN]
         subject_config = self.cfg[KEY_SUBJECT_CONFIG]
         message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
@@ -156,70 +167,76 @@ class Component(ComponentBase):
                 attachments_column = attachments_config.get(KEY_ATTACHMENTS_COLUMN)
 
             for row in reader:
-                if subject_column is not None:
-                    subject_template_text = row[subject_column]
-                    self._validate_template_text(subject_template_text, columns)
-
                 try:
-                    rendered_subject = Template(subject_template_text).render(row)
-                except Exception:
-                    rendered_subject = subject_template_text
+                    if subject_column is not None:
+                        subject_template_text = row[subject_column]
+                        self._validate_template_text(subject_template_text, columns)
 
-                if plaintext_template_column is not None:
-                    plaintext_template_text = row[plaintext_template_column]
-                    self._validate_template_text(plaintext_template_text, columns)
-
-                    if html_template_column is not None:
-                        html_template_text = row[html_template_column]
-                        self._validate_template_text(html_template_text, columns)
-
-                rendered_plaintext_message = Template(plaintext_template_text).render(row)
-
-                rendered_html_message = None
-                if use_html_template:
-                    rendered_html_message = Template(html_template_text).render(row)
-
-                custom_attachments_paths_by_filename = attachments_paths_by_filename
-                if not all_attachments:
-                    custom_attachments_paths_by_filename = {
-                        attachment_filename: attachments_paths_by_filename[attachment_filename]
-                        for attachment_filename in json.loads(row[attachments_column])
-                    }
-
-                email_ = self._client.build_email(
-                    recipient_email_address=row[self.cfg[KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN]],
-                    subject=rendered_subject,
-                    attachments_paths_by_filename=custom_attachments_paths_by_filename,
-                    rendered_plaintext_message=rendered_plaintext_message,
-                    rendered_html_message=rendered_html_message
-                )
-
-                logging.info(
-                    f"Sending email with subject: `{email_['Subject']}` from `{email_['From']}` to `{email_['To']}`")
-                status = 'OK'
-                error_message = ''
-                if not dry_run:
                     try:
-                        self._client.send_email(email_)
-                    except Exception as e:
-                        error_message = str(e)
-                        status = 'ERROR'
+                        rendered_subject = Template(subject_template_text).render(row)
+                    except Exception:
+                        rendered_subject = subject_template_text
 
-                rendered_html_message_writable = ''
-                if rendered_html_message is not None:
-                    rendered_html_message_writable = rendered_html_message.replace('\n', '<newline>')
+                    if plaintext_template_column is not None:
+                        plaintext_template_text = row[plaintext_template_column]
+                        self._validate_template_text(plaintext_template_text, columns)
 
-                self._results_writer.writerow(dict(
-                    status=status,
-                    recipient_email_address=email_['To'],
-                    sender_email_address=email_['From'],
-                    subject=email_['Subject'],
-                    plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
-                    html_message_body=rendered_html_message_writable,
-                    attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
-                    error_message=error_message
-                ))
-                time.sleep(SLEEP_INTERVAL)
+                        if html_template_column is not None:
+                            html_template_text = row[html_template_column]
+                            self._validate_template_text(html_template_text, columns)
+
+                    rendered_plaintext_message = Template(plaintext_template_text).render(row)
+
+                    rendered_html_message = None
+                    if use_html_template:
+                        rendered_html_message = Template(html_template_text).render(row)
+
+                    custom_attachments_paths_by_filename = attachments_paths_by_filename
+                    if not all_attachments:
+                        custom_attachments_paths_by_filename = {
+                            attachment_filename: attachments_paths_by_filename[attachment_filename]
+                            for attachment_filename in json.loads(row[attachments_column])
+                        }
+
+                    email_ = self._client.build_email(
+                        recipient_email_address=row[self.cfg[KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN]],
+                        subject=rendered_subject,
+                        attachments_paths_by_filename=custom_attachments_paths_by_filename,
+                        rendered_plaintext_message=rendered_plaintext_message,
+                        rendered_html_message=rendered_html_message
+                    )
+
+                    logging.info(
+                        f"Sending email with subject: `{email_['Subject']}` from `{email_['From']}` to `{email_['To']}`")
+                    status = 'OK'
+                    error_message = ''
+                    if not dry_run:
+                        try:
+                            self._client.send_email(email_)
+                        except Exception as e:
+                            error_message = str(e)
+                            status = 'ERROR'
+
+                    rendered_html_message_writable = ''
+                    if rendered_html_message is not None:
+                        rendered_html_message_writable = rendered_html_message.replace('\n', '<newline>')
+
+                    self._results_writer.writerow(dict(
+                        status=status,
+                        recipient_email_address=email_['To'],
+                        sender_email_address=email_['From'],
+                        subject=email_['Subject'],
+                        plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
+                        html_message_body=rendered_html_message_writable,
+                        attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
+                        error_message=error_message
+                    ))
+                    time.sleep(SLEEP_INTERVAL)
+                except Exception as e:
+                    if not continue_on_error:
+                        raise UserException(
+                            'Error occurred, when trying to send an email. Please validate your configuration.')
+                    self._results_writer.writerow({**general_error_row, 'error_message': str(e)})
 
     def _extract_template_files_full_paths(
             self, in_files: List[FileDefinition]) -> Tuple[Union[str, None], Union[str, None]]:
@@ -248,11 +265,12 @@ class Component(ComponentBase):
         placeholders = set([placeholder.strip('{}') for placeholder in placeholders])
         return placeholders
 
-    def _validate_template_text(self, template_text: str, columns: set) -> None:
+    def _validate_template_text(self, template_text: str, columns: set, continue_on_error: bool = False) -> None:
         template_placeholders = self._parse_template_placeholders(template_text)
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
-            raise UserException(f"ERROR - missing columns: {missing_columns}")
+            if not continue_on_error:
+                raise UserException(f"ERROR - missing columns: {missing_columns}")
 
     def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()

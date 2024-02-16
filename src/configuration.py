@@ -113,4 +113,5 @@ class Configuration(ConfigurationBase):
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    continue_on_error: bool = True
     dry_run: bool = False

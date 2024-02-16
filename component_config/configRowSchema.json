@@ -299,11 +299,19 @@
       "default": true,
       "propertyOrder": 6
     },
+    "continue_on_error": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Continue On Error",
+      "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
+      "default": true,
+      "propertyOrder": 7
+    },
     "validate_config": {
       "type": "button",
       "format": "sync-action",
       "description": "Validates the whole config",
-      "propertyOrder": 7,
+      "propertyOrder": 8,
       "options": {
         "async": {
           "label": "VALIDATE CONFIG",
