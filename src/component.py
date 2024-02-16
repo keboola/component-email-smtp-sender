@@ -207,7 +207,8 @@ class Component(ComponentBase):
                     )
 
                     logging.info(
-                        f"Sending email with subject: `{email_['Subject']}` from `{email_['From']}` to `{email_['To']}`")
+                        f"Sending email with subject: `{email_['Subject']}`"
+                        f" from `{email_['From']}` to `{email_['To']}`")
                     status = 'OK'
                     error_message = ''
                     if not dry_run:
