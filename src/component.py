@@ -220,14 +220,14 @@ class Component(ComponentBase):
 
                     rendered_html_message_writable = ''
                     if rendered_html_message is not None:
-                        rendered_html_message_writable = rendered_html_message.replace('\n', '<newline>')
+                        rendered_html_message_writable = rendered_html_message
 
                     self._results_writer.writerow(dict(
                         status=status,
                         recipient_email_address=email_['To'],
                         sender_email_address=email_['From'],
                         subject=email_['Subject'],
-                        plaintext_message_body=rendered_plaintext_message.replace('\n', '<newline>'),
+                        plaintext_message_body=rendered_plaintext_message,
                         html_message_body=rendered_html_message_writable,
                         attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
                         error_message=error_message
