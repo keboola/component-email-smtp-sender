@@ -70,10 +70,7 @@ class SMTPClient:
 
     def _init_tls_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
-        server.connect()
-        server.ehlo()
         server.starttls()
-        server.ehlo()
         server.login(self.sender_email_address, self.password)
         self._smtp_server = server
 
