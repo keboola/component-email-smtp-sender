@@ -114,6 +114,7 @@
         "plaintext_template_filename": {
           "type": "string",
           "title": "Plaintext Template Filename",
+          "default": "template.txt",
           "propertyOrder": 4,
           "options": {
             "dependencies": {"message_body_source": "from_template_file"}
@@ -122,6 +123,7 @@
         "html_template_filename": {
           "type": "string",
           "title": "HTML Template Filename",
+          "default": "template.html",
           "propertyOrder": 8,
           "options": {
             "dependencies": {
@@ -133,6 +135,7 @@
           "propertyOrder": 6,
           "type": "string",
           "title": "Plaintext Message Body Template",
+          "default": "Hello {{recipient_name}}! This is example message body.",
           "format": "textarea",
           "options": {
             "input_height": "100px",
@@ -156,6 +159,7 @@
           "type": "string",
           "title": "HTML Message Body Template",
           "format": "textarea",
+          "default": "<h3>Hello {{recipient_name}}!</h3><p>This is example message body.</p>",
           "options": {
             "input_height": "100px",
             "dependencies": {
