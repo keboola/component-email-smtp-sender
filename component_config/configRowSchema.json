@@ -200,6 +200,7 @@
         },
         "attachments_column": {
           "type": "string",
+          "description": "column is expected to contain a json list of attachment names, associated with specific emails",
           "watch": {
             "columns": "_metadata_.table.columns"
           },
