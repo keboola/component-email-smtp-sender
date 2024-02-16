@@ -22,7 +22,8 @@
           "type": "string",
           "enum": ["from_table", "using_template"],
           "options": {
-            "enum_titles": ["From Table", "Using Template"]
+            "enum_titles": ["From Table", "Using Template"],
+            "tooltip": "From Table - specify column which contains subject template/text in Jinja2 format - example use case - You want to have different subject for different recipients.\nUsing Template - paste the subject template/text into the text area field - example use case - You want all recipients to receive similar subject template/text"
           },
           "propertyOrder": 1
         },
@@ -33,6 +34,7 @@
           },
           "title": "Subject Column",
           "propertyOrder": 2,
+          "default": "subject",
           "enumSource": "columns",
           "required": true,
           "options": {
@@ -43,6 +45,7 @@
           "propertyOrder": 3,
           "type": "string",
           "title": "Plaintext subject template",
+          "default": "Hello {{recipient_name}}",
           "format": "textarea",
           "options": {
             "input_height": "100px",
@@ -73,7 +76,8 @@
           "type": "string",
           "enum": ["from_table", "from_template_file", "from_template_definition"],
           "options": {
-            "enum_titles": ["From Table", "From Template File", "From Template Definition"]
+            "enum_titles": ["From Table", "From Template File", "From Template Definition"],
+            "tooltip": "From Table - specify column which contains template in Jinja2 format - example use case - You want to have different template/message for different recipients.\nFrom Template File - specify input file name containing the template in Jinja2 format - example use case - you wan't each recipient to receive similar template (with differently filled placeholders), and have an orchestration which spawns this template, so that this configuration has the template updated automatically\nFrom Template Definition - paste the template text into the text area field - example use case - You want all recipients to receive similar template and it will not be changed often."
           },
           "propertyOrder": 1
         },
@@ -195,7 +199,8 @@
           "propertyOrder": 1,
           "enum": ["from_table", "all_input_files"],
           "options": {
-            "enum_titles": ["From Table", "All Input Files"]
+            "enum_titles": ["From Table", "All Input Files"],
+            "tooltip": "From Table - expects column to be a json list of attachment filenames in input mapping, associated with specific recipients - example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\nAll Input Files - all recipients will receive all non-template files in the input mapping"
           }
         },
         "attachments_column": {
@@ -215,7 +220,7 @@
         "validate_attachments": {
           "type": "button",
           "format": "sync-action",
-          "description": "Validates All attachments are present in file input mapping",
+          "description": "Validates All attachments are present in file input mapping (excluding the template files)",
           "propertyOrder": 3,
           "options": {
             "async": {
