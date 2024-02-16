@@ -334,14 +334,14 @@ class Component(ComponentBase):
     def __exit__(self):
         self._client._smtp_server.close()
 
-    @sync_action('test_smtp_server_connection')
+    @sync_action('testConnection')
     def test_smtp_server_connection(self) -> None:
         self._init_configuration()
         try:
             self.init_client()
-            return ValidationResult('OK - Connection established!', MessageType.SUCCESS)
-        except Exception as e:
-            return ValidationResult(f"ERROR - Could not establish connection! - {e}", MessageType.SUCCESS)
+            return ValidationResult('- ✅ Connection successful!', MessageType.SUCCESS)
+        except Exception:
+            return ValidationResult('- ❌ Connection failed', MessageType.SUCCESS)
 
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
