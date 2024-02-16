@@ -329,7 +329,7 @@ class Component(ComponentBase):
             return ValidationResult(VALID_TEMPLATE_MESSAGE, MessageType.SUCCESS)
         except UserException as e:
             print(e)
-            return ValidationResult(e, MessageType.SUCCESS)
+            return ValidationResult(e, MessageType.DANGER)
 
     def __exit__(self):
         self._client._smtp_server.close()
@@ -381,7 +381,10 @@ class Component(ComponentBase):
                 except Exception as e:
                     message = str(e)
         print(message)
-        return ValidationResult(message, MessageType.SUCCESS)
+        if message == VALID_SUBJECT_MESSAGE:
+            return ValidationResult(message, MessageType.SUCCESS)
+        else:
+            return ValidationResult(message, MessageType.DANGER)
 
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
@@ -400,7 +403,10 @@ class Component(ComponentBase):
         if missing_attachments:
             message = 'ERROR - Missing attachments: ' + ', '.join(missing_attachments)
         print(message)
-        return ValidationResult(message, MessageType.SUCCESS)
+        if message == VALID_ATTACHMENTS_MESSAGE:
+            return ValidationResult(message, MessageType.SUCCESS)
+        else:
+            return ValidationResult(message, MessageType.DANGER)
 
     @sync_action("validate_config")
     def validate_config(self):
@@ -430,7 +436,10 @@ class Component(ComponentBase):
             message_base = 'OK - Config Valid!\n'
         message = message_base + '\n'.join(messages)
         print(message)
-        return ValidationResult(message, MessageType.SUCCESS)
+        if message.startswith('OK'):
+            return ValidationResult(message, MessageType.SUCCESS)
+        else:
+            return ValidationResult(message, MessageType.DANGER)
 
 
 """
