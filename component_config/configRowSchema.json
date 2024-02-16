@@ -230,7 +230,7 @@
       "type": "boolean",
       "format": "checkbox",
       "title": "Dry run",
-      "description": "if checked - only builds emails and outputs them, but doesn't send them",
+      "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
       "default": true,
       "propertyOrder": 6
     },
