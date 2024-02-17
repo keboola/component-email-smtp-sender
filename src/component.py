@@ -128,6 +128,7 @@ class Component(ComponentBase):
                 attachments_column = attachments_config.attachments_column
 
             for row in reader:
+                recipient_email_address = row[self.cfg.recipient_email_address_column]
                 try:
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
@@ -160,7 +161,7 @@ class Component(ComponentBase):
                         }
 
                     email_ = self._client.build_email(
-                        recipient_email_address=row[self.cfg.recipient_email_address_column],
+                        recipient_email_address=recipient_email_address,
                         subject=rendered_subject,
                         attachments_paths_by_filename=custom_attachments_paths_by_filename,
                         rendered_plaintext_message=rendered_plaintext_message,
@@ -196,7 +197,11 @@ class Component(ComponentBase):
                     if not continue_on_error:
                         raise UserException(
                             'Error occurred, when trying to send an email. Please validate your configuration.')
-                    self._results_writer.writerow({**general_error_row, 'error_message': str(e)})
+                    self._results_writer.writerow({
+                        **general_error_row,
+                        'sender_email_address': self._client.sender_email_address,
+                        'recipient_email_address': recipient_email_address,
+                        'error_message': str(e)})
 
     def _extract_template_files_full_paths(
             self, in_files_by_name: Dict[str, List[FileDefinition]]) -> Tuple[Union[str, None], Union[str, None]]:
