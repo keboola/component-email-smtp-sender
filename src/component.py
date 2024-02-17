@@ -229,7 +229,7 @@ class Component(ComponentBase):
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
             if not continue_on_error:
-                raise UserException(f"❌ - missing columns:" + ', '.join(missing_columns))
+                raise UserException("❌ - missing columns:" + ', '.join(missing_columns))
 
     def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()
