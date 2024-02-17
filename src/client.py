@@ -9,6 +9,7 @@ from email import encoders
 import smtplib
 import socket
 import socks
+from keboola.component import UserException
 
 
 class SMTPClient:
@@ -18,7 +19,8 @@ class SMTPClient:
     def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
                  proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
-                 use_ssl: bool = False):
+                 connection_protocol: str = 'SSL'):
+
         self.sender_email_address = sender_email_address
         self.password = password
         self.server_host = server_host
@@ -30,14 +32,16 @@ class SMTPClient:
             socket.socket = socks.socksocket
             socks.wrapmodule(smtplib)
 
-        if use_ssl:
+        if connection_protocol == 'SSL':
             logging.info('Using SSL SMTP server')
             self.init_smtp_server = self._init_ssl_smtp_server
             self.send_email = self._send_email_via_ssl_server
-        else:
+        elif connection_protocol == 'TLS':
             logging.info('Using TLS SMTP server')
             self.init_smtp_server = self._init_tls_smtp_server
             self.send_email = self._send_email_via_tls_server
+        else:
+            raise UserException(f'Invalid connection protocol: {connection_protocol}')
 
     def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
                     rendered_html_message: Union[str, None] = None,

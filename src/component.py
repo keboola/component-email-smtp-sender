@@ -16,41 +16,10 @@ from configuration import Configuration
 from client import SMTPClient
 
 
-KEY_CONNECTION_CONFIG = 'connection_config'
-KEY_SENDER_EMAIL_ADDRESS = 'sender_email_address'
-KEY_SENDER_PASSWORD = 'pswd_sender_password'
-KEY_SERVER_HOST = 'server_host'
-KEY_SERVER_PORT = 'server_port'
-KEY_PROXY_SERVER_HOST = 'proxy_server_host'
-KEY_PROXY_SERVER_PORT = 'proxy_server_port'
-KEY_CONNECTION_PROTOCOL = 'connection_protocol'
-KEY_PROXY_SERVER_USERNAME = 'proxy_server_username'
-KEY_PROXY_SERVER_PASSWORD = 'pswd_proxy_server_password'
-
-KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN = 'recipient_email_address_column'
-
-KEY_SUBJECT_CONFIG = 'subject_config'
-KEY_SUBJECT_SOURCE = 'subject_source'
-KEY_SUBJECT_COLUMN = 'subject_column'
-KEY_SUBJECT_TEMPLATE = 'subject_template'
-
-KEY_MESSAGE_BODY_CONFIG = 'message_body_config'
-KEY_MESSAGE_BODY_SOURCE = 'message_body_source'
-KEY_USE_HTML_TEMPLATE = 'use_html_template'
-KEY_MESSAGE_BODY_COLUMN = 'message_body_column'
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
 KEY_HTML_TEMPLATE_COLUMN = 'html_template_column'
-KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
-KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_DEFINITION = 'plaintext_template_definition'
 KEY_HTML_TEMPLATE_DEFINITION = 'html_template_definition'
-
-KEY_ATTACHMENTS_CONFIG = 'attachments_config'
-KEY_ATTACHMENTS_SOURCE = 'attachments_source'
-KEY_ATTACHMENTS_COLUMN = 'attachments_column'
-
-KEY_CONTINUE_ON_ERROR = 'continue_on_error'
-KEY_DRY_RUN = 'dry_run'
 
 SLEEP_INTERVAL = 0.1
 
@@ -70,14 +39,6 @@ general_error_row = {
     'plaintext_message_body': '',
     'html_message_body': '',
     'attachment_filenames': ''}
-
-# list of mandatory parameters => if some is missing,
-# TODO: fix mandatory params check
-# REQUIRED_PARAMETERS = {KEY_SENDER_EMAIL_ADDRESS, KEY_SENDER_PASSWORD, KEY_SERVER_HOST, KEY_SERVER_PORT}
-REQUIRED_PARAMETERS = set()
-
-# port 465 for SMTP_SSL
-# port 587 for SMTP with TLS
 
 
 class Component(ComponentBase):
@@ -116,43 +77,42 @@ class Component(ComponentBase):
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
     def init_client(self):
-        connection_config = self.cfg[KEY_CONNECTION_CONFIG]
-        use_ssl = connection_config[KEY_CONNECTION_PROTOCOL] == 'SSL'
+        connection_config = self.cfg.connection_config
         self._client = SMTPClient(
-            sender_email_address=connection_config[KEY_SENDER_EMAIL_ADDRESS],
-            password=connection_config[KEY_SENDER_PASSWORD],
-            server_host=connection_config[KEY_SERVER_HOST],
-            server_port=connection_config[KEY_SERVER_PORT],
-            proxy_server_host=connection_config[KEY_PROXY_SERVER_HOST],
-            proxy_server_port=connection_config[KEY_PROXY_SERVER_PORT],
-            proxy_server_username=connection_config[KEY_PROXY_SERVER_USERNAME],
-            proxy_server_password=connection_config[KEY_PROXY_SERVER_PASSWORD],
-            use_ssl=use_ssl
+            sender_email_address=connection_config.sender_email_address,
+            password=connection_config.pswd_sender_password,
+            server_host=connection_config.server_host,
+            server_port=connection_config.server_port,
+            proxy_server_host=connection_config.proxy_server_host,
+            proxy_server_port=connection_config.proxy_server_port,
+            proxy_server_username=connection_config.proxy_server_username,
+            proxy_server_password=connection_config.pswd_proxy_server_password,
+            connection_protocol=connection_config.connection_protocol
         )
         self._client.init_smtp_server()
 
     def send_emails(self, in_table_path: str, attachments_paths_by_filename: Dict[str, str]) -> None:
-        continue_on_error = self.cfg[KEY_CONTINUE_ON_ERROR]
-        dry_run = self.cfg[KEY_DRY_RUN]
-        subject_config = self.cfg[KEY_SUBJECT_CONFIG]
-        message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
-        attachments_config = self.cfg[KEY_ATTACHMENTS_CONFIG]
-        use_html_template = message_body_config[KEY_USE_HTML_TEMPLATE]
+        continue_on_error = self.cfg.continue_on_error
+        dry_run = self.cfg.dry_run
+        subject_config = self.cfg.subject_config
+        message_body_config = self.cfg.message_body_config
+        attachments_config = self.cfg.attachments_config
+        use_html_template = message_body_config.use_html_template
 
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
 
             subject_column = None
-            if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
-                subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
+            if subject_config.subject_source == 'from_table':
+                subject_column = subject_config.subject_column
             else:
-                subject_template_text = subject_config[KEY_SUBJECT_TEMPLATE]
+                subject_template_text = subject_config.subject_template
                 self._validate_template_text(subject_template_text, columns)
 
-            if message_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_table':
-                plaintext_template_column = message_body_config[KEY_PLAINTEXT_TEMPLATE_COLUMN]
-                html_template_column = message_body_config.get(KEY_HTML_TEMPLATE_COLUMN)
+            if message_body_config.message_body_source == 'from_table':
+                plaintext_template_column = message_body_config.plaintext_template_column
+                html_template_column = message_body_config.html_template_column
             else:
                 plaintext_template_column = None
                 html_template_column = None
@@ -162,9 +122,9 @@ class Component(ComponentBase):
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
 
-            all_attachments = attachments_config[KEY_ATTACHMENTS_SOURCE] == 'all_input_files'
+            all_attachments = attachments_config.attachments_source == 'all_input_files'
             if not all_attachments:
-                attachments_column = attachments_config.get(KEY_ATTACHMENTS_COLUMN)
+                attachments_column = attachments_config.attachments_column
 
             for row in reader:
                 try:
@@ -199,7 +159,7 @@ class Component(ComponentBase):
                         }
 
                     email_ = self._client.build_email(
-                        recipient_email_address=row[self.cfg[KEY_RECIPIENT_EMAIL_ADDRESS_COLUMN]],
+                        recipient_email_address=row[self.cfg.recipient_email_address_column],
                         subject=rendered_subject,
                         attachments_paths_by_filename=custom_attachments_paths_by_filename,
                         rendered_plaintext_message=rendered_plaintext_message,
@@ -242,15 +202,15 @@ class Component(ComponentBase):
     def _extract_template_files_full_paths(
             self, in_files: List[FileDefinition]) -> Tuple[Union[str, None], Union[str, None]]:
         """Extracts full paths for template files if they are provided"""
-        msg_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
+        msg_body_config = self.cfg.message_body_config
         plaintext_template_path = None
         html_template_path = None
-        if msg_body_config[KEY_MESSAGE_BODY_SOURCE] == 'from_template_file':
-            plaintext_template_filename = msg_body_config[KEY_PLAINTEXT_TEMPLATE_FILENAME]
+        if msg_body_config.message_body_source == 'from_template_file':
+            plaintext_template_filename = msg_body_config.plaintext_template_filename
             plaintext_template_path = next(file.full_path for file in in_files
                                            if file.name.endswith(plaintext_template_filename))
-            if msg_body_config[KEY_USE_HTML_TEMPLATE]:
-                html_template_filename = msg_body_config[KEY_HTML_TEMPLATE_FILENAME]
+            if msg_body_config.use_html_template:
+                html_template_filename = msg_body_config.html_template_filename
                 html_template_path = next(file.full_path for file in in_files
                                           if file.name.endswith(html_template_filename))
         return plaintext_template_path, html_template_path
@@ -277,15 +237,15 @@ class Component(ComponentBase):
         attachments_filenames = set()
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
-            attachments_column = self.cfg[KEY_ATTACHMENTS_CONFIG].get(KEY_ATTACHMENTS_COLUMN)
+            attachments_column = self.cfg.attachments_config.attachments_column
             for row in reader:
                 for attachment_filename in json.loads(row[attachments_column]):
                     attachments_filenames.add(attachment_filename)
         return attachments_filenames
 
-    def _validate_templates_from_table(self, reader: csv.DictReader, plaintext: str) -> ValidationResult:
+    def _validate_templates_from_table(self, reader: csv.DictReader, plaintext: bool) -> ValidationResult:
         key_template_column = KEY_PLAINTEXT_TEMPLATE_COLUMN if plaintext else KEY_HTML_TEMPLATE_COLUMN
-        template_column = self.cfg[KEY_MESSAGE_BODY_CONFIG][key_template_column]
+        template_column = self.cfg.message_body_config[key_template_column]
         unique_placeholders = set()
         for row in reader:
             row_placeholders = self._parse_template_placeholders(template_text=row[template_column])
@@ -298,8 +258,8 @@ class Component(ComponentBase):
 
     def _read_template_text(self, plaintext: bool = True) -> str:
         """Reads in template either from file, or from config"""
-        message_body_config = self.cfg[KEY_MESSAGE_BODY_CONFIG]
-        message_body_source = message_body_config[KEY_MESSAGE_BODY_SOURCE]
+        message_body_config = self.cfg.message_body_config
+        message_body_source = message_body_config.message_body_source
 
         if message_body_source == 'from_template_file':
             template_path = self.plaintext_template_path if plaintext else self.html_template_path
@@ -319,8 +279,8 @@ class Component(ComponentBase):
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
 
-            if self.cfg[KEY_MESSAGE_BODY_CONFIG].get(KEY_MESSAGE_BODY_SOURCE) == 'from_table':
-                return self._validate_templates_from_table(reader, KEY_PLAINTEXT_TEMPLATE_COLUMN)
+            if self.cfg.message_body_config.message_body_source == 'from_table':
+                return self._validate_templates_from_table(reader, plaintext)
 
         template_text = self._read_template_text(plaintext)
         try:
@@ -354,11 +314,11 @@ class Component(ComponentBase):
     @sync_action('validate_subject')
     def validate_subject(self) -> ValidationResult:
         self._init_configuration()
-        subject_config = self.cfg[KEY_SUBJECT_CONFIG]
+        subject_config = self.cfg.subject_config
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
-        if subject_config.get(KEY_SUBJECT_SOURCE) == 'from_table':
-            subject_column = subject_config.get(KEY_SUBJECT_COLUMN)
+        if subject_config.subject_source == 'from_table':
+            subject_column = subject_config.subject_column
 
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
@@ -375,7 +335,7 @@ class Component(ComponentBase):
                     if missing_columns:
                         message = 'ERROR - missing placeholders:' + ', '.join(missing_columns)
             else:
-                subject_template_text = subject_config[KEY_SUBJECT_TEMPLATE]
+                subject_template_text = subject_config.subject_template
                 try:
                     self._validate_template_text(subject_template_text, columns)
                 except Exception as e:
@@ -390,7 +350,7 @@ class Component(ComponentBase):
     def validate_attachments(self) -> ValidationResult:
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'all_input_files':
+        if self.cfg.attachments_config.attachments_source == 'all_input_files':
             print(message)
             return ValidationResult(message, MessageType.SUCCESS)
 
@@ -424,7 +384,7 @@ class Component(ComponentBase):
             messages.append(template_validation_result_message)
 
         attachments_validation_result_message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg[KEY_ATTACHMENTS_CONFIG][KEY_ATTACHMENTS_SOURCE] == 'from_table':
+        if self.cfg.attachments_config.attachments_source == 'from_table':
             attachments_validation_result = self.validate_attachments()
             attachments_validation_result_message = attachments_validation_result.message
         messages.append(attachments_validation_result_message)
