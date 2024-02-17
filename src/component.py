@@ -55,13 +55,14 @@ class Component(ComponentBase):
         self._init_configuration()
         self.init_client()
         in_tables = self.get_input_tables_definitions()
-        in_files = self.get_input_file_definitions_grouped_by_name()
+        in_files_by_name = self.get_input_file_definitions_grouped_by_name()
         in_table_path = in_tables[0].full_path
-        self.plaintext_template_path, self.html_template_path = self._extract_template_files_full_paths(in_files)
+        self.plaintext_template_path, self.html_template_path = \
+            self._extract_template_files_full_paths(in_files_by_name)
 
         attachments_paths_by_filename = {
             name: files[0].full_path
-            for name, files in in_files.items()
+            for name, files in in_files_by_name.items()
             if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
 
         # TODO: return write_always=True once we have queue_v2
@@ -198,19 +199,19 @@ class Component(ComponentBase):
                     self._results_writer.writerow({**general_error_row, 'error_message': str(e)})
 
     def _extract_template_files_full_paths(
-            self, in_files: List[FileDefinition]) -> Tuple[Union[str, None], Union[str, None]]:
+            self, in_files_by_name: Dict[str, List[FileDefinition]]) -> Tuple[Union[str, None], Union[str, None]]:
         """Extracts full paths for template files if they are provided"""
         msg_body_config = self.cfg.message_body_config
         plaintext_template_path = None
         html_template_path = None
         if msg_body_config.message_body_source == 'from_template_file':
             plaintext_template_filename = msg_body_config.plaintext_template_filename
-            plaintext_template_path = next(file.full_path for file in in_files
-                                           if file.name.endswith(plaintext_template_filename))
+            plaintext_template_path = next(files[0].full_path for name, files in in_files_by_name.items()
+                                           if files[0].name.endswith(plaintext_template_filename))
             if msg_body_config.use_html_template:
                 html_template_filename = msg_body_config.html_template_filename
-                html_template_path = next(file.full_path for file in in_files
-                                          if file.name.endswith(html_template_filename))
+                html_template_path = next(files[0].full_path for name, files in in_files_by_name.items()
+                                          if files[0].name.endswith(html_template_filename))
         return plaintext_template_path, html_template_path
 
     @staticmethod
