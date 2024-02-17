@@ -103,7 +103,7 @@
       "options": {
         "async": {
           "label": "TEST SMTP SERVER CONNECTION",
-          "action": "test_smtp_server_connection"
+          "action": "testConnection"
         }
       }
     }
