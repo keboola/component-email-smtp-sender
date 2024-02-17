@@ -94,14 +94,14 @@ class Component(ComponentBase):
         self._init_configuration()
         self.init_client()
         in_tables = self.get_input_tables_definitions()
-        in_files = self.get_input_files_definitions()
+        in_files = self.get_input_file_definitions_grouped_by_name()
         in_table_path = in_tables[0].full_path
         self.plaintext_template_path, self.html_template_path = self._extract_template_files_full_paths(in_files)
 
         attachments_paths_by_filename = {
-            file.name.replace(f'{file.id}_', ''): file.full_path
-            for file in in_files
-            if file.full_path not in [self.plaintext_template_path, self.html_template_path]}
+            name: files[0].full_path
+            for name, files in in_files.items()
+            if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
 
         # TODO: return write_always=True once we have queue_v2
         results_table = self.create_out_table_definition('results.csv')
@@ -396,8 +396,7 @@ class Component(ComponentBase):
 
         in_tables = self.get_input_tables_definitions()
         in_table_path = in_tables[0].full_path
-        in_files = self.get_input_files_definitions()
-        input_filenames = {file.name for file in in_files}
+        input_filenames = list(self.get_input_file_definitions_grouped_by_name())
         expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
         missing_attachments = expected_input_filenames - set(input_filenames)
         if missing_attachments:
