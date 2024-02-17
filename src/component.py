@@ -26,10 +26,10 @@ SLEEP_INTERVAL = 0.1
 RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_address', 'subject',
                         'plaintext_message_body', 'html_message_body', 'attachment_filenames', 'error_message')
 
-VALID_CONNECTION_CONFIG_MESSAGE = 'OK - Connection configuration is valid'
-VALID_SUBJECT_MESSAGE = 'OK - All subject placeholders are present in the input table'
-VALID_TEMPLATE_MESSAGE = 'OK - All template placeholders are present in the input table'
-VALID_ATTACHMENTS_MESSAGE = 'OK - All attachments are present'
+VALID_CONNECTION_CONFIG_MESSAGE = '✅ - Connection configuration is valid'
+VALID_SUBJECT_MESSAGE = '✅ - All subject placeholders are present in the input table'
+VALID_TEMPLATE_MESSAGE = '✅ - All template placeholders are present in the input table'
+VALID_ATTACHMENTS_MESSAGE = '✅ - All attachments are present'
 
 general_error_row = {
     'status': 'ERROR',
@@ -229,7 +229,7 @@ class Component(ComponentBase):
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
             if not continue_on_error:
-                raise UserException(f"ERROR - missing columns: {missing_columns}")
+                raise UserException(f"❌ - missing columns:" + ', '.join(missing_columns))
 
     def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()
@@ -251,7 +251,7 @@ class Component(ComponentBase):
         missing_columns = set(unique_placeholders) - set(reader.fieldnames)
         message = VALID_TEMPLATE_MESSAGE
         if missing_columns:
-            message = 'ERROR - missing columns:' + ', '.join(missing_columns)
+            message = '❌ - missing columns:' + ', '.join(missing_columns)
         return ValidationResult(message, MessageType.SUCCESS)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
@@ -297,9 +297,9 @@ class Component(ComponentBase):
         self._init_configuration()
         try:
             self.init_client()
-            return ValidationResult('- ✅ Connection successful!', MessageType.SUCCESS)
+            return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
         except Exception:
-            return ValidationResult('- ❌ Connection failed', MessageType.SUCCESS)
+            return ValidationResult('❌ Connection failed', MessageType.SUCCESS)
 
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
@@ -331,7 +331,7 @@ class Component(ComponentBase):
                     unique_placeholders = unique_placeholders.union(row_placeholders)
                     missing_columns = set(unique_placeholders) - set(columns)
                     if missing_columns:
-                        message = 'ERROR - missing placeholders:' + ', '.join(missing_columns)
+                        message = '❌ - missing placeholders:' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template
                 try:
@@ -358,7 +358,7 @@ class Component(ComponentBase):
         expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
         missing_attachments = expected_input_filenames - set(input_filenames)
         if missing_attachments:
-            message = 'ERROR - Missing attachments: ' + ', '.join(missing_attachments)
+            message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
         print(message)
         if message == VALID_ATTACHMENTS_MESSAGE:
             return ValidationResult(message, MessageType.SUCCESS)
@@ -373,7 +373,7 @@ class Component(ComponentBase):
             self.init_client()
             messages.append(VALID_CONNECTION_CONFIG_MESSAGE)
         except Exception as e:
-            messages.append(f"ERROR - Could not establish connection! - {e}")
+            messages.append(f"❌ - Could not establish connection! - {e}")
 
         for template_validation_method in (self.validate_plaintext_template, self.validate_html_template,
                                            self.validate_subject):
@@ -387,13 +387,13 @@ class Component(ComponentBase):
             attachments_validation_result_message = attachments_validation_result.message
         messages.append(attachments_validation_result_message)
 
-        if any(message.startswith('ERROR') for message in messages):
-            message_base = 'ERROR - Config Invalid!\n'
+        if any(message.startswith('❌') for message in messages):
+            message_base = '❌ - Config Invalid!\n'
         else:
-            message_base = 'OK - Config Valid!\n'
+            message_base = '✅ - Config Valid!\n'
         message = message_base + '\n'.join(messages)
         print(message)
-        if message.startswith('OK'):
+        if message.startswith('✅'):
             return ValidationResult(message, MessageType.SUCCESS)
         else:
             return ValidationResult(message, MessageType.DANGER)
