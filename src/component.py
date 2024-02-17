@@ -235,7 +235,7 @@ class Component(ComponentBase):
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
             if not continue_on_error:
-                raise UserException("❌ - missing columns:" + ', '.join(missing_columns))
+                raise UserException("❌ - missing columns: " + ', '.join(missing_columns))
 
     def _get_attachments_filenames_from_table(self, in_table_path):
         attachments_filenames = set()
@@ -337,7 +337,7 @@ class Component(ComponentBase):
                     unique_placeholders = unique_placeholders.union(row_placeholders)
                     missing_columns = set(unique_placeholders) - set(columns)
                     if missing_columns:
-                        message = '❌ - missing placeholders:' + ', '.join(missing_columns)
+                        message = '❌ - missing placeholders: ' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template
                 try:
