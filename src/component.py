@@ -78,17 +78,17 @@ class Component(ComponentBase):
 
     def init_client(self):
         connection_config = self.cfg.connection_config
+        proxy_server_config = connection_config.proxy_server_config
         self._client = SMTPClient(
             sender_email_address=connection_config.sender_email_address,
             password=connection_config.pswd_sender_password,
             server_host=connection_config.server_host,
             server_port=connection_config.server_port,
-            proxy_server_host=connection_config.proxy_server_host,
-            proxy_server_port=connection_config.proxy_server_port,
-            proxy_server_username=connection_config.proxy_server_username,
-            proxy_server_password=connection_config.pswd_proxy_server_password,
-            connection_protocol=connection_config.connection_protocol
-        )
+            connection_protocol=connection_config.connection_protocol,
+            proxy_server_host=proxy_server_config.proxy_server_host,
+            proxy_server_port=proxy_server_config.proxy_server_port,
+            proxy_server_username=proxy_server_config.proxy_server_username,
+            proxy_server_password=proxy_server_config.pswd_proxy_server_password)
         self._client.init_smtp_server()
 
     def send_emails(self, in_table_path: str, attachments_paths_by_filename: Dict[str, str]) -> None:
@@ -163,8 +163,7 @@ class Component(ComponentBase):
                         subject=rendered_subject,
                         attachments_paths_by_filename=custom_attachments_paths_by_filename,
                         rendered_plaintext_message=rendered_plaintext_message,
-                        rendered_html_message=rendered_html_message
-                    )
+                        rendered_html_message=rendered_html_message)
 
                     logging.info(
                         f"Sending email with subject: `{email_['Subject']}`"
@@ -190,8 +189,7 @@ class Component(ComponentBase):
                         plaintext_message_body=rendered_plaintext_message,
                         html_message_body=rendered_html_message_writable,
                         attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
-                        error_message=error_message
-                    ))
+                        error_message=error_message))
                     time.sleep(SLEEP_INTERVAL)
                 except Exception as e:
                     if not continue_on_error:
