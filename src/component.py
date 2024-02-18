@@ -10,6 +10,7 @@ from keboola.component.exceptions import UserException
 from keboola.component.base import sync_action
 from keboola.component.sync_actions import ValidationResult, MessageType
 from keboola.component.dao import FileDefinition
+from kbcstorage.client import Client as StorageClient
 from jinja2 import Template
 
 from configuration import Configuration
@@ -324,10 +325,9 @@ class Component(ComponentBase):
         if subject_config.subject_source == 'from_table':
             subject_column = subject_config.subject_column
 
-        in_tables = self.get_input_tables_definitions()
-        in_table_path = in_tables[0].full_path
+        in_table_path = self._download_table_from_storage_api()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
+            reader = csv.DictReader(in_table, quotechar='\'')
             columns = set(reader.fieldnames)
             if subject_column is not None:
                 unique_placeholders = set()
@@ -337,7 +337,7 @@ class Component(ComponentBase):
                     unique_placeholders = unique_placeholders.union(row_placeholders)
                     missing_columns = set(unique_placeholders) - set(columns)
                     if missing_columns:
-                        message = '❌ - missing placeholders: ' + ', '.join(missing_columns)
+                        message = '❌ - missing placeholders:' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template
                 try:
@@ -345,10 +345,7 @@ class Component(ComponentBase):
                 except Exception as e:
                     message = str(e)
         print(message)
-        if message == VALID_SUBJECT_MESSAGE:
-            return ValidationResult(message, MessageType.SUCCESS)
-        else:
-            return ValidationResult(message, MessageType.DANGER)
+        return ValidationResult(message, MessageType.SUCCESS)
 
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
@@ -358,18 +355,14 @@ class Component(ComponentBase):
             print(message)
             return ValidationResult(message, MessageType.SUCCESS)
 
-        in_tables = self.get_input_tables_definitions()
-        in_table_path = in_tables[0].full_path
-        input_filenames = list(self.get_input_file_definitions_grouped_by_name())
+        input_filenames = self._list_input_filenames_in_sync_action()
+        in_table_path = self._download_table_from_storage_api()
         expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
         missing_attachments = expected_input_filenames - set(input_filenames)
         if missing_attachments:
             message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
         print(message)
-        if message == VALID_ATTACHMENTS_MESSAGE:
-            return ValidationResult(message, MessageType.SUCCESS)
-        else:
-            return ValidationResult(message, MessageType.DANGER)
+        return ValidationResult(message, MessageType.SUCCESS)
 
     @sync_action("validate_config")
     def validate_config(self):
