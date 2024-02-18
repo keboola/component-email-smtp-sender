@@ -260,7 +260,7 @@ class Component(ComponentBase):
         missing_columns = set(unique_placeholders) - set(reader.fieldnames)
         message = VALID_TEMPLATE_MESSAGE
         if missing_columns:
-            message = '❌ - missing columns:' + ', '.join(missing_columns)
+            message = '❌ - missing columns: ' + ', '.join(missing_columns)
         return ValidationResult(message, MessageType.SUCCESS)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
@@ -278,16 +278,40 @@ class Component(ComponentBase):
             raise UserException('Invalid message body source')
         return template_text
 
+    def _list_input_filenames_in_sync_action(self):
+        #  TODO: validate this
+        self._init_configuration()
+        filenames = [file.destination for file in self.configuration.files_input_mapping]
+        return filenames
+
+    def _init_storage_client(self):
+        storage_token = self.environment_variables.token
+        storage_client = StorageClient('https://connection.keboola.com', storage_token)
+        return storage_client
+
+    def _download_table_from_storage_api(self) -> str:
+        storage_client = self._init_storage_client()
+        table_id = self.configuration.tables_input_mapping[0].source
+        table = storage_client.tables.export_to_file(table_id=table_id, path_name='data')
+        # TODO: validate that returned value actually contains full_table attribute
+        return table.full_path
+
+    def _download_file_from_storage_api(self) -> str:
+        storage_client = self._init_storage_client()
+        file_id = self.configuration.files_input_mapping[0].source
+        file = storage_client.files.export_to_file(file_id=file_id, path_name='data')
+        # TODO: validate that returned object actually contains full_path attribute
+        return file.full_path
+
     def _validate_template(self, plaintext=True) -> ValidationResult:
         self._init_configuration()
-        in_tables = self.get_input_tables_definitions()
-        in_table_path = in_tables[0].full_path
+        in_table_path = self._download_table_from_storage_api()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
+            reader = csv.DictReader(in_table, quotechar='\'')
             columns = set(reader.fieldnames)
 
             if self.cfg.message_body_config.message_body_source == 'from_table':
-                return self._validate_templates_from_table(reader, plaintext)
+                return self._validate_templates_from_table(reader, KEY_PLAINTEXT_TEMPLATE_COLUMN)
 
         template_text = self._read_template_text(plaintext)
         try:
@@ -308,7 +332,7 @@ class Component(ComponentBase):
             self.init_client(connection_config=connection_config)
             return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
         except Exception:
-            return ValidationResult('❌ Connection failed', MessageType.SUCCESS)
+            return ValidationResult('❌ Connection failed', MessageType.DANGER)
 
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
@@ -339,7 +363,7 @@ class Component(ComponentBase):
                     unique_placeholders = unique_placeholders.union(row_placeholders)
                     missing_columns = set(unique_placeholders) - set(columns)
                     if missing_columns:
-                        message = '❌ - missing placeholders:' + ', '.join(missing_columns)
+                        message = '❌ - missing columns: ' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template
                 try:
