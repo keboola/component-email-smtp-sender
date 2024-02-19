@@ -69,8 +69,7 @@ class Component(ComponentBase):
             for name, files in in_files_by_name.items()
             if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
 
-        # TODO: return write_always=True once we have queue_v2
-        results_table = self.create_out_table_definition('results.csv')
+        results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
@@ -242,7 +241,7 @@ class Component(ComponentBase):
             if not continue_on_error:
                 raise UserException("❌ - Missing columns: " + ', '.join(missing_columns))
 
-    def _get_attachments_filenames_from_table(self, in_table_path: str) -> List[str]:
+    def _get_attachments_filenames_from_table(self, in_table_path: str) -> Set[str]:
         attachments_filenames = set()
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
