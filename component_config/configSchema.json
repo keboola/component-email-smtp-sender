@@ -4,115 +4,117 @@
   "required": [
     "connection_config"
   ],
-  "connection_config": {
-    "title": "Connection Config",
-    "type": "object",
-    "format": "grid-strict",
-    "propertyOrder": 1,
-    "properties": {
-      "sender_email_address": {
-        "type": "string",
-        "title": "Sender Email Address",
-        "propertyOrder": 1,
-        "options": {
-          "grid_columns": 6
-        }
-      },
-      "#sender_password": {
-        "type": "string",
-        "title": "Sender App Password",
-        "propertyOrder": 2,
-        "options": {
-          "grid_columns": 6
-        }
-      },
-      "server_host": {
-        "type": "string",
-        "title": "SMTP Server Host",
-        "propertyOrder": 3,
-        "options": {
-          "grid_columns": 6
-        }
-      },
-      "server_port": {
-        "type": "integer",
-        "title": "SMTP Server Port (typically 25, 465, 587)",
-        "default": 465,
-        "propertyOrder": 4,
-        "options": {
-          "grid_columns": 6
-        }
-      },
-      "connection_protocol": {
-        "title": "Connection Protocol",
-        "type": "string",
-        "enum": [
-          "SSL",
-          "TLS"
-        ],
-        "propertyOrder": 5
-      },
-      "use_proxy_server": {
-        "type": "boolean",
-        "format": "checkbox",
-        "title": "Use Proxy Server",
-        "description": "if checked - connection to the SMTP server will be established via your proxy server",
-        "default": true,
-        "propertyOrder": 6
-      },
-      "proxy_server_config": {
-        "title": "Proxy Server Config",
-        "type": "object",
-        "format": "grid-strict",
-        "propertyOrder": 7,
-        "options": {
-          "dependencies": {
-            "use_proxy_server": true
+  "properties": {
+    "connection_config": {
+      "title": "Connection Config",
+      "type": "object",
+      "format": "grid-strict",
+      "propertyOrder": 1,
+      "properties": {
+        "sender_email_address": {
+          "type": "string",
+          "title": "Sender Email Address",
+          "propertyOrder": 1,
+          "options": {
+            "grid_columns": 6
           }
         },
-        "properties": {
-          "proxy_server_host": {
-            "type": "string",
-            "title": "Proxy Server Host",
-            "propertyOrder": 1,
-            "options": {
-              "grid_columns": 6
+        "#sender_password": {
+          "type": "string",
+          "title": "Sender App Password",
+          "propertyOrder": 2,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "server_host": {
+          "type": "string",
+          "title": "SMTP Server Host",
+          "propertyOrder": 3,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "server_port": {
+          "type": "integer",
+          "title": "SMTP Server Port (typically 25, 465, 587)",
+          "default": 465,
+          "propertyOrder": 4,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "connection_protocol": {
+          "title": "Connection Protocol",
+          "type": "string",
+          "enum": [
+            "SSL",
+            "TLS"
+          ],
+          "propertyOrder": 5
+        },
+        "use_proxy_server": {
+          "type": "boolean",
+          "format": "checkbox",
+          "title": "Use Proxy Server",
+          "description": "if checked - connection to the SMTP server will be established via your proxy server",
+          "default": true,
+          "propertyOrder": 6
+        },
+        "proxy_server_config": {
+          "title": "Proxy Server Config",
+          "type": "object",
+          "format": "grid-strict",
+          "propertyOrder": 7,
+          "options": {
+            "dependencies": {
+              "use_proxy_server": true
             }
           },
-          "proxy_server_port": {
-            "type": "integer",
-            "title": "Proxy Server Port",
-            "propertyOrder": 2,
-            "options": {
-              "grid_columns": 6
-            }
-          },
-          "proxy_server_username": {
-            "type": "string",
-            "title": "Username",
-            "propertyOrder": 3,
-            "options": {
-              "grid_columns": 6
-            }
-          },
-          "#proxy_server_password": {
-            "type": "string",
-            "title": "Password",
-            "propertyOrder": 4,
-            "options": {
-              "grid_columns": 6
+          "properties": {
+            "proxy_server_host": {
+              "type": "string",
+              "title": "Proxy Server Host",
+              "propertyOrder": 1,
+              "options": {
+                "grid_columns": 6
+              }
+            },
+            "proxy_server_port": {
+              "type": "integer",
+              "title": "Proxy Server Port",
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 6
+              }
+            },
+            "proxy_server_username": {
+              "type": "string",
+              "title": "Username",
+              "propertyOrder": 3,
+              "options": {
+                "grid_columns": 6
+              }
+            },
+            "#proxy_server_password": {
+              "type": "string",
+              "title": "Password",
+              "propertyOrder": 4,
+              "options": {
+                "grid_columns": 6
+              }
             }
           }
-        }
-      },
-      "test_smtp_server_connection": {
-        "type": "button",
-        "format": "sync-action",
-        "propertyOrder": 8,
-        "options": {
-          "async": {
-            "label": "TEST SMTP SERVER CONNECTION",
-            "action": "testConnection"
+        },
+        "test_smtp_server_connection": {
+          "type": "button",
+          "format": "sync-action",
+          "propertyOrder": 8,
+          "options": {
+            "async": {
+              "label": "TEST SMTP SERVER CONNECTION",
+              "action": "testConnection"
+            }
           }
         }
       }
