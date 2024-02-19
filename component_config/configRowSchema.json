@@ -20,10 +20,10 @@
         "subject_source": {
           "title": "Subject Source",
           "type": "string",
-          "enum": ["from_table", "using_template"],
+          "enum": ["from_table", "from_template_definition"],
           "options": {
-            "enum_titles": ["From Table", "Using Template"],
-            "tooltip": "From Table - specify column which contains subject template/text in Jinja2 format - example use case - You want to have different subject for different recipients.\nUsing Template - paste the subject template/text into the text area field - example use case - You want all recipients to receive similar subject template/text"
+            "enum_titles": ["From Table", "From Template Definition"],
+            "tooltip": "From Table - specify column which contains subject template/text in Jinja2 format - example use case - You want to have different subject for different recipients.\nFrom Template Definition - paste the subject template/text into the text area field - example use case - You want all recipients to receive similar subject template/text"
           },
           "propertyOrder": 1
         },
@@ -41,15 +41,15 @@
             "dependencies": {"subject_source":  "from_table"}
           }
         },
-        "subject_template": {
+        "subject_template_definition": {
           "propertyOrder": 3,
           "type": "string",
-          "title": "Plaintext subject template",
+          "title": "Plaintext Subject Template",
           "default": "Hello {{recipient_name}}",
           "format": "textarea",
           "options": {
             "input_height": "100px",
-            "dependencies": {"subject_source":  "using_template"}
+            "dependencies": {"subject_source":  "from_template_definition"}
           }
         },
         "validate_subject": {

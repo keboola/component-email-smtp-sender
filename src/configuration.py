@@ -75,21 +75,21 @@ class ConnectionConfig(ConfigurationBase):
 class SubjectConfig(ConfigurationBase):
     """
     subject_source:
-    "In Table" -> "subject_column"
-    "From Template" -> "subject_template"
+    "from_table" -> "subject_column"
+    "from_template_definition" -> "subject_template"
     """
     subject_source: str
     subject_column: Union[str, None] = None
-    subject_template: Union[str, None] = None
+    subject_template_definition: Union[str, None] = None
 
 
 @dataclass
 class MessageBodyConfig(ConfigurationBase):
     """
     message_body_source:
-    "from_table" -> "plaintext_message_column" + "html_message_column"
+    "from_table" -> "plaintext_template_column" + "html_template_column"
     "from_template_file" -> "plaintext_template_filename" + "html_template_filename"
-    "from_template_definition" -> "plaintext_template_text" + "html_template_text"
+    "from_template_definition" -> "plaintext_template_definition" + "html_template_definition"
     """
     message_body_source: str = ''
     use_html_template: bool = False

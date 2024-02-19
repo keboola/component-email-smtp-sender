@@ -112,7 +112,7 @@ class Component(ComponentBase):
             if subject_config.subject_source == 'from_table':
                 subject_column = subject_config.subject_column
             else:
-                subject_template_text = subject_config.subject_template
+                subject_template_text = subject_config.subject_template_definition
                 self._validate_template_text(subject_template_text, columns)
 
             if message_body_config.message_body_source == 'from_table':
@@ -371,7 +371,7 @@ class Component(ComponentBase):
                     if missing_columns:
                         message = '❌ - missing columns: ' + ', '.join(missing_columns)
             else:
-                subject_template_text = subject_config.subject_template
+                subject_template_text = subject_config.subject_template_definition
                 try:
                     self._validate_template_text(subject_template_text, columns)
                 except Exception as e:
