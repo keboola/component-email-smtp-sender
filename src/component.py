@@ -412,7 +412,7 @@ class Component(ComponentBase):
 
     @sync_action('debug_sync')
     def debug_sync(self):
-        self._init_configuration()
+        # self._init_configuration()
         token = self.environment_variables.token
         messages = list()
         messages.append(f'{token=}')
