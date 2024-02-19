@@ -31,7 +31,8 @@ RESULT_TABLE_COLUMNS = ('status', 'recipient_email_address', 'sender_email_addre
 
 VALID_CONNECTION_CONFIG_MESSAGE = '✅ - Connection configuration is valid'
 VALID_SUBJECT_MESSAGE = '✅ - All subject placeholders are present in the input table'
-VALID_TEMPLATE_MESSAGE = '✅ - All template placeholders are present in the input table'
+VALID_PLAINTEXT_TEMPLATE_MESSAGE = '✅ - All plaintext template placeholders are present in the input table'
+VALID_HTML_TEMPLATE_MESSAGE = '✅ - All HTML template placeholders are present in the input table'
 VALID_ATTACHMENTS_MESSAGE = '✅ - All attachments are present'
 
 general_error_row = {
@@ -252,17 +253,19 @@ class Component(ComponentBase):
         return attachments_filenames
 
     def _validate_templates_from_table(self, reader: csv.DictReader, plaintext: bool) -> ValidationResult:
+        message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         key_template_column = KEY_PLAINTEXT_TEMPLATE_COLUMN if plaintext else KEY_HTML_TEMPLATE_COLUMN
+        message_type = MessageType.SUCCESS
         template_column = self.cfg.message_body_config[key_template_column]
         unique_placeholders = set()
         for row in reader:
             row_placeholders = self._parse_template_placeholders(template_text=row[template_column])
             unique_placeholders = unique_placeholders.union(row_placeholders)
         missing_columns = set(unique_placeholders) - set(reader.fieldnames)
-        message = VALID_TEMPLATE_MESSAGE
         if missing_columns:
             message = '❌ - Missing columns: ' + ', '.join(missing_columns)
-        return ValidationResult(message, MessageType.SUCCESS)
+            message_type = MessageType.DANGER
+        return ValidationResult(message, message_type)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
         """Reads in template either from file, or from config"""
@@ -312,6 +315,7 @@ class Component(ComponentBase):
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         self._init_configuration()
         in_table_path = self._download_table_from_storage_api()
+        valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
@@ -322,7 +326,7 @@ class Component(ComponentBase):
         template_text = self._read_template_text(plaintext)
         try:
             self._validate_template_text(template_text, columns)
-            return ValidationResult(VALID_TEMPLATE_MESSAGE, MessageType.SUCCESS)
+            return ValidationResult(valid_message, MessageType.SUCCESS)
         except UserException as e:
             return ValidationResult(str(e), MessageType.DANGER)
 
