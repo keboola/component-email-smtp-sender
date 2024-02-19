@@ -1,4 +1,9 @@
 {
+  "type": "object",
+  "title": "Connection Config",
+  "required": [
+    "connection_config"
+  ],
   "connection_config": {
     "title": "Connection Config",
     "type": "object",
