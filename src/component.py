@@ -370,7 +370,7 @@ class Component(ComponentBase):
                     unique_placeholders = unique_placeholders.union(row_placeholders)
                     missing_columns = set(unique_placeholders) - set(columns)
                     if missing_columns:
-                        message = '❌ - missing columns: ' + ', '.join(missing_columns)
+                        message = '❌ - Missing columns: ' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template
                 try:
