@@ -12,7 +12,7 @@ from keboola.component.sync_actions import ValidationResult, MessageType
 from keboola.component.dao import FileDefinition
 from jinja2 import Template
 
-from configuration import Configuration
+from configuration import Configuration, ConnectionConfig
 from client import SMTPClient
 
 
@@ -73,13 +73,14 @@ class Component(ComponentBase):
             self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
 
-    def _init_configuration(self, validate=True) -> None:
-        if validate:
-            self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
+    def _init_configuration(self) -> None:
+        self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
-    def init_client(self):
-        connection_config = self.cfg.connection_config
+    def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
+        if connection_config is None:
+            connection_config = self.cfg.connection_config
+
         proxy_server_config = connection_config.proxy_server_config
         self._client = SMTPClient(
             sender_email_address=connection_config.sender_email_address,
@@ -301,9 +302,9 @@ class Component(ComponentBase):
 
     @sync_action('testConnection')
     def test_smtp_server_connection(self) -> None:
-        self._init_configuration(validate=False)
+        connection_config = ConnectionConfig.load_from_dict(self.configuration.parameters['connection_config'])
         try:
-            self.init_client()
+            self.init_client(connection_config=connection_config)
             return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
         except Exception:
             return ValidationResult('❌ Connection failed', MessageType.SUCCESS)
