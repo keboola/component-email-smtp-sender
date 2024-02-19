@@ -251,16 +251,20 @@ class Component(ComponentBase):
                     attachments_filenames.add(attachment_filename)
         return attachments_filenames
 
+    def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
+        unique_placeholders = set()
+        for row in reader:
+            row_placeholders = self._parse_template_placeholders(template_text=row[column])
+            unique_placeholders = unique_placeholders.union(row_placeholders)
+        missing_columns = set(unique_placeholders) - set(reader.fieldnames)
+        return missing_columns
+
     def _validate_templates_from_table(self, reader: csv.DictReader, plaintext: bool) -> ValidationResult:
         message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         key_template_column = KEY_PLAINTEXT_TEMPLATE_COLUMN if plaintext else KEY_HTML_TEMPLATE_COLUMN
         message_type = MessageType.SUCCESS
         template_column = self.cfg.message_body_config[key_template_column]
-        unique_placeholders = set()
-        for row in reader:
-            row_placeholders = self._parse_template_placeholders(template_text=row[template_column])
-            unique_placeholders = unique_placeholders.union(row_placeholders)
-        missing_columns = set(unique_placeholders) - set(reader.fieldnames)
+        missing_columns = self._get_missing_columns_from_table(reader, template_column)
         if missing_columns:
             message = '❌ - Missing columns: ' + ', '.join(missing_columns)
             message_type = MessageType.DANGER
@@ -362,14 +366,9 @@ class Component(ComponentBase):
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
             if subject_column is not None:
-                unique_placeholders = set()
-                for row in reader:
-                    subject_template_text = row[subject_column]
-                    row_placeholders = self._parse_template_placeholders(subject_template_text)
-                    unique_placeholders = unique_placeholders.union(row_placeholders)
-                    missing_columns = set(unique_placeholders) - set(columns)
-                    if missing_columns:
-                        message = '❌ - missing columns: ' + ', '.join(missing_columns)
+                missing_columns = self._get_missing_columns_from_table(reader, subject_column)
+                if missing_columns:
+                    message = '❌ - Missing columns: ' + ', '.join(missing_columns)
             else:
                 subject_template_text = subject_config.subject_template_definition
                 try:
