@@ -1,6 +1,6 @@
 import csv
 import logging
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
@@ -19,6 +19,8 @@ from client import SMTPClient
 
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
 KEY_HTML_TEMPLATE_COLUMN = 'html_template_column'
+KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
+KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_DEFINITION = 'plaintext_template_definition'
 KEY_HTML_TEMPLATE_DEFINITION = 'html_template_definition'
 
@@ -227,7 +229,7 @@ class Component(ComponentBase):
             return file.read()
 
     @staticmethod
-    def _parse_template_placeholders(template_text: str) -> set:
+    def _parse_template_placeholders(template_text: str) -> Set[str]:
         placeholders = re.findall(r'\{\{.*?\}\}', template_text)
         placeholders = set([placeholder.strip('{}') for placeholder in placeholders])
         return placeholders
@@ -237,9 +239,9 @@ class Component(ComponentBase):
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
             if not continue_on_error:
-                raise UserException("❌ - missing columns: " + ', '.join(missing_columns))
+                raise UserException("❌ - Missing columns: " + ', '.join(missing_columns))
 
-    def _get_attachments_filenames_from_table(self, in_table_path):
+    def _get_attachments_filenames_from_table(self, in_table_path: str) -> List[str]:
         attachments_filenames = set()
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
@@ -259,7 +261,7 @@ class Component(ComponentBase):
         missing_columns = set(unique_placeholders) - set(reader.fieldnames)
         message = VALID_TEMPLATE_MESSAGE
         if missing_columns:
-            message = '❌ - missing columns: ' + ', '.join(missing_columns)
+            message = '❌ - Missing columns: ' + ', '.join(missing_columns)
         return ValidationResult(message, MessageType.SUCCESS)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
@@ -268,7 +270,11 @@ class Component(ComponentBase):
         message_body_source = message_body_config.message_body_source
 
         if message_body_source == 'from_template_file':
-            template_path = self.plaintext_template_path if plaintext else self.html_template_path
+            key_template_filename = KEY_PLAINTEXT_TEMPLATE_FILENAME if plaintext else KEY_HTML_TEMPLATE_FILENAME
+            template_filename = message_body_config[key_template_filename]
+            files = self._list_files_in_sync_actions()
+            template_file_id = next(file['id'] for file in files if file['name'] == template_filename)
+            template_path = self._download_file_from_storage_api(template_file_id)
             template_text = self._read_template_file(template_path)
         elif message_body_source == 'from_template_definition':
             key_template_text = KEY_PLAINTEXT_TEMPLATE_DEFINITION if plaintext else KEY_HTML_TEMPLATE_DEFINITION
@@ -277,32 +283,33 @@ class Component(ComponentBase):
             raise UserException('Invalid message body source')
         return template_text
 
-    def _list_input_filenames_in_sync_action(self):
-        #  TODO: validate this
-        self._init_configuration()
-        filenames = [file.destination for file in self.configuration.files_input_mapping]
-        return filenames
-
-    def _init_storage_client(self):
+    def _init_storage_client(self) -> StorageClient:
         storage_token = self.environment_variables.token
+        # TODO: check whether we need to ask user for region of keboola connection
         storage_client = StorageClient('https://connection.keboola.com', storage_token)
         return storage_client
 
     def _download_table_from_storage_api(self) -> str:
         storage_client = self._init_storage_client()
-        # TODO: figure out how to access the input table id, input_mapping is not available in sync actions
         table_id = self.configuration.tables_input_mapping[0].source
-        table = storage_client.tables.export_to_file(table_id=table_id, path_name='data')
-        return table.full_path
+        table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        return table_path
 
-    def _download_file_from_storage_api(self) -> str:
+    def _download_file_from_storage_api(self, file_id) -> str:
         storage_client = self._init_storage_client()
-        # TODO: figure out how to access the input file id, input_mapping is not available in sync actions
-        file_id = self.configuration.files_input_mapping[0].source
-        file = storage_client.files.export_to_file(file_id=file_id, path_name='data')
-        return file.full_path
+        file_path = storage_client.files.download(file_id=file_id, local_path=self.files_in_path)
+        return file_path
 
-    def _validate_template(self, plaintext=True) -> ValidationResult:
+    def _list_files_in_sync_actions(self) -> List[Dict]:
+        storage_client = self._init_storage_client()
+        all_input_files = []
+        for file_input in self.configuration.config_data['storage']['input']['files']:
+            tags = [tag['name'] for tag in file_input['source']['tags']]
+            input_files = storage_client.files.list(tags=tags)
+            all_input_files.extend(input_files)
+        return all_input_files
+
+    def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         self._init_configuration()
         in_table_path = self._download_table_from_storage_api()
         with open(in_table_path) as in_table:
@@ -310,28 +317,26 @@ class Component(ComponentBase):
             columns = set(reader.fieldnames)
 
             if self.cfg.message_body_config.message_body_source == 'from_table':
-                return self._validate_templates_from_table(reader, KEY_PLAINTEXT_TEMPLATE_COLUMN)
+                return self._validate_templates_from_table(reader, plaintext)
 
         template_text = self._read_template_text(plaintext)
         try:
             self._validate_template_text(template_text, columns)
-            print(VALID_TEMPLATE_MESSAGE)
             return ValidationResult(VALID_TEMPLATE_MESSAGE, MessageType.SUCCESS)
         except UserException as e:
-            print(e)
-            return ValidationResult(e, MessageType.DANGER)
+            return ValidationResult(str(e), MessageType.DANGER)
 
     def __exit__(self):
         self._client._smtp_server.close()
 
     @sync_action('testConnection')
-    def test_smtp_server_connection(self) -> None:
+    def test_smtp_server_connection(self) -> ValidationResult:
         connection_config = ConnectionConfig.load_from_dict(self.configuration.parameters['connection_config'])
         try:
             self.init_client(connection_config=connection_config)
-            return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
+            return ValidationResult('✅ - Connection established successfully', MessageType.SUCCESS)
         except Exception:
-            return ValidationResult('❌ Connection failed', MessageType.DANGER)
+            return ValidationResult("❌ - Connection couldn't be established", MessageType.DANGER)
 
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
@@ -351,7 +356,7 @@ class Component(ComponentBase):
 
         in_table_path = self._download_table_from_storage_api()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
             if subject_column is not None:
                 unique_placeholders = set()
@@ -368,7 +373,6 @@ class Component(ComponentBase):
                     self._validate_template_text(subject_template_text, columns)
                 except Exception as e:
                     message = str(e)
-        print(message)
         message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
@@ -377,18 +381,17 @@ class Component(ComponentBase):
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
         if self.cfg.attachments_config.attachments_source != 'all_input_files':
-            input_filenames = self._list_input_filenames_in_sync_action()
+            input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
             in_table_path = self._download_table_from_storage_api()
             expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
             missing_attachments = expected_input_filenames - set(input_filenames)
             if missing_attachments:
                 message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
-            print(message)
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
     @sync_action("validate_config")
-    def validate_config(self):
+    def validate_config(self) -> ValidationResult:
         self._init_configuration()
         validation_methods = (
             self.test_smtp_server_connection,
@@ -400,25 +403,14 @@ class Component(ComponentBase):
         messages = [validation_method().message for validation_method in validation_methods]
 
         if any(message.startswith('❌') for message in messages):
-            message_base = '❌ - Config Invalid!\n'
+            message_base = '❌ - Config Invalid\n'
             message_type = MessageType.DANGER
         else:
-            message_base = '✅ - Config Valid!\n'
+            message_base = '✅ - Config Valid\n'
             message_type = MessageType.SUCCESS
 
         message = message_base + '\n'.join(messages)
-        print(message)
         return ValidationResult(message, message_type)
-
-    @sync_action('debug_sync')
-    def debug_sync(self):
-        # self._init_configuration()
-        token = self.environment_variables.token
-        messages = list()
-        messages.append(f'{token=}')
-        messages.append(', '.join([table.source for table in self.configuration.tables_input_mapping]))
-        # messages.append(file.source for file in self.configuration.files_input_mapping)
-        return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
 
 
 """
