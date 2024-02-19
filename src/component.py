@@ -73,8 +73,9 @@ class Component(ComponentBase):
             self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
 
-    def _init_configuration(self) -> None:
-        self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
+    def _init_configuration(self, validate=True) -> None:
+        if validate:
+            self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
     def init_client(self):
@@ -300,7 +301,7 @@ class Component(ComponentBase):
 
     @sync_action('testConnection')
     def test_smtp_server_connection(self) -> None:
-        self._init_configuration()
+        self._init_configuration(validate=False)
         try:
             self.init_client()
             return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
