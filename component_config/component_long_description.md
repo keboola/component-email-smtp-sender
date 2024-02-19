@@ -1,4 +1,5 @@
 # SMTP Sender Application
+- Component enabling users to send emails with custom subject, message body and attachments from keboola platfrom
 
 ## Config fields
 
@@ -7,18 +8,20 @@
  - **Sender App Password** - certain SMTP server providers require you to generate an app password instead of the account one (typically when MFA is enabled)
  - **SMTP Server Host** - SMTP Server Host
  - **SMTP Server Port** - SMTP Server Port
- - **Proxy Server Host** - Proxy Server Host
- - **Proxy Server Port** - Proxy Server Host
- - **Proxy Server Username** - Proxy Server Username
- - **Proxy Server Password** - Proxy Server Password
  - **Connection Protocol** - specifies, whether to connect via SSL or TLS
+ - **Use Proxy Server** - Use Proxy Server
+ - **Proxy Server Config**
+   - **Proxy Server Host** - Proxy Server Host
+   - **Proxy Server Port** - Proxy Server Host
+   - **Proxy Server Username** - Proxy Server Username
+   - **Proxy Server Password** - Proxy Server Password
 
 **Recipient Email Address Column** - Recipient email address column name
 
 **Subject Config**
-- **Subject Source** - `From Table`, `Using Template`
+- **Subject Source** - `From Table`, `From Template Definition`
 - **Subject Column** - Subject column name (Subject Source = `From Table`)
-- **Subject Template** - Jinja2 formatted subject (Subject Source = `Using Template`)
+- **Plaintext Subject Template** - Jinja2 formatted subject (Subject Source = `From Template Definition`)
 
 **Message Body Config**
 - **Message Body Source** - `From Table`,`From Template File`, `From Template Definition`
@@ -40,10 +43,18 @@
  - arbitrary number of attachment files - attachment can be of any file type (certain SMTP server providers forbid some types since they are considered potentially dangerous)
 ## Required Input Tables
  - `arbitrary_table_name`
+
+ **columns:**
+ - recipient_email_address
+ - subject_column (depends on config)
+ - plaintext_template_column (depends on config)
+ - html_template_column (depends on config)
+ - attachments_column (depends on config)
  - columns with names corresponding to placeholder names in your template(s)
 
 ## Output Table
  - `results`
+
  **columns:**
  - `status` - `OK` or `ERROR`
  - `recipient_email_address` - recipient_email_address
@@ -57,7 +68,7 @@
 ## Sync Actions
  - `TEST SMTP SERVER CONNECTION` - tests, whether connection can be established
  - `VALIDATE SUBJECT` - validates, that all placeholders in the provided subject template are present in the input table
- - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided plaintext template are present in the input table
- - `VALIDATE HTML TEMPLATE` - validates, that all placeholders in the provided HTML template are present in the input table
- - `VALIDATE ATTACHMENTS` - validates, that all input files are present in the file input mappinng
+ - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided message body plaintext template are present in the input table
+ - `VALIDATE HTML TEMPLATE` - validates, that all placeholders in the provided message body HTML template are present in the input table
+ - `VALIDATE ATTACHMENTS` - validates, that all attachment files are present in the file input mapping
  - `VALIDATE CONFIG` - runs all tests and validations above
