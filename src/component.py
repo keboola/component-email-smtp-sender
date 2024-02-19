@@ -412,13 +412,14 @@ class Component(ComponentBase):
 
     @sync_action('validate_subject')
     def debug_sync(self):
-        self._init_configuration()
-        token = self.environment_variables.token
-        messages = list()
-        messages.append(f'{token=}')
-        messages.append(', '.join([table.source for table in self.configuration.tables_input_mapping]))
-        # messages.append(file.source for file in self.configuration.files_input_mapping)
-        return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
+        return ValidationResult('sync action update check', MessageType.SUCCESS)
+        # self._init_configuration()
+        # token = self.environment_variables.token
+        # messages = list()
+        # messages.append(f'{token=}')
+        # messages.append(', '.join([table.source for table in self.configuration.tables_input_mapping]))
+        # # messages.append(file.source for file in self.configuration.files_input_mapping)
+        # return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
 
 
 """
