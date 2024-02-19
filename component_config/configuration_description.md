@@ -1,5 +1,5 @@
 # SMTP Sender Application
-- Component enabling users to send emails with custom subject, message body and attachments from keboola platfrom
+- Component enabling users to send emails with custom subject, message body and attachments from keboola platform
 
 ## Config fields
 
@@ -35,7 +35,7 @@
 
 **Attachments Config**
 - **Attachments Source** - `From Table`, `All Input Files`
-- **Attachments Column** - Attachments column name - json list containing input filenames, so that each recipient can recieve a specific subset of attachments (Attachments Source = `From Table`)
+- **Attachments Column** - Attachments column name - json list containing input filenames, so that each recipient can receive a specific subset of attachments (Attachments Source = `From Table`)
 - **Shared attachments** - if checked, all non-template files in the files input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
 
 **Dry Run** - if checked - emails are built, but not sent
