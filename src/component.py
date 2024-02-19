@@ -340,37 +340,37 @@ class Component(ComponentBase):
     def validate_html_template(self) -> ValidationResult:
         return self._validate_template(plaintext=False)
 
-    @sync_action('validate_subject')
-    def validate_subject(self) -> ValidationResult:
-        self._init_configuration()
-        subject_config = self.cfg.subject_config
-        message = VALID_SUBJECT_MESSAGE
-        subject_column = None
-        if subject_config.subject_source == 'from_table':
-            subject_column = subject_config.subject_column
-
-        in_table_path = self._download_table_from_storage_api()
-        with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
-            columns = set(reader.fieldnames)
-            if subject_column is not None:
-                unique_placeholders = set()
-                for row in reader:
-                    subject_template_text = row[subject_column]
-                    row_placeholders = self._parse_template_placeholders(subject_template_text)
-                    unique_placeholders = unique_placeholders.union(row_placeholders)
-                    missing_columns = set(unique_placeholders) - set(columns)
-                    if missing_columns:
-                        message = '❌ - missing columns: ' + ', '.join(missing_columns)
-            else:
-                subject_template_text = subject_config.subject_template
-                try:
-                    self._validate_template_text(subject_template_text, columns)
-                except Exception as e:
-                    message = str(e)
-        print(message)
-        message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
-        return ValidationResult(message, message_type)
+    # @sync_action('validate_subject')
+    # def validate_subject(self) -> ValidationResult:
+    #     self._init_configuration()
+    #     subject_config = self.cfg.subject_config
+    #     message = VALID_SUBJECT_MESSAGE
+    #     subject_column = None
+    #     if subject_config.subject_source == 'from_table':
+    #         subject_column = subject_config.subject_column
+    #
+    #     in_table_path = self._download_table_from_storage_api()
+    #     with open(in_table_path) as in_table:
+    #         reader = csv.DictReader(in_table, quotechar='\'')
+    #         columns = set(reader.fieldnames)
+    #         if subject_column is not None:
+    #             unique_placeholders = set()
+    #             for row in reader:
+    #                 subject_template_text = row[subject_column]
+    #                 row_placeholders = self._parse_template_placeholders(subject_template_text)
+    #                 unique_placeholders = unique_placeholders.union(row_placeholders)
+    #                 missing_columns = set(unique_placeholders) - set(columns)
+    #                 if missing_columns:
+    #                     message = '❌ - missing columns: ' + ', '.join(missing_columns)
+    #         else:
+    #             subject_template_text = subject_config.subject_template
+    #             try:
+    #                 self._validate_template_text(subject_template_text, columns)
+    #             except Exception as e:
+    #                 message = str(e)
+    #     print(message)
+    #     message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
+    #     return ValidationResult(message, message_type)
 
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
@@ -410,7 +410,7 @@ class Component(ComponentBase):
         print(message)
         return ValidationResult(message, message_type)
 
-    @sync_action('debug_sync')
+    @sync_action('validate_subject')
     def debug_sync(self):
         self._init_configuration()
         token = self.environment_variables.token
