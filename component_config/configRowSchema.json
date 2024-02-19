@@ -262,6 +262,17 @@
           "action": "validate_config"
         }
       }
+    },
+    "debug_sync": {
+      "type": "button",
+      "format": "sync-action",
+      "propertyOrder": 9,
+      "options": {
+        "async": {
+          "label": "DEBUG SYNC",
+          "action": "debug_sync"
+        }
+      }
     }
   }
 
