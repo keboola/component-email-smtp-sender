@@ -416,7 +416,7 @@ class Component(ComponentBase):
         token = self.environment_variables.token
         messages = list()
         messages.append(f'{token=}')
-        messages.append(table.source for table in self.configuration.tables_input_mapping)
+        messages.append(', '.join([table.source for table in self.configuration.tables_input_mapping]))
         # messages.append(file.source for file in self.configuration.files_input_mapping)
         return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
 
