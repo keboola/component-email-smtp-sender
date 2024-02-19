@@ -289,23 +289,23 @@ class Component(ComponentBase):
 
     def _download_table_from_storage_api(self) -> str:
         storage_client = self._init_storage_client()
+        # TODO: figure out how to access the input table id, input_mapping is not available in sync actions
         table_id = self.configuration.tables_input_mapping[0].source
         table = storage_client.tables.export_to_file(table_id=table_id, path_name='data')
-        # TODO: validate that returned value actually contains full_table attribute
         return table.full_path
 
     def _download_file_from_storage_api(self) -> str:
         storage_client = self._init_storage_client()
+        # TODO: figure out how to access the input file id, input_mapping is not available in sync actions
         file_id = self.configuration.files_input_mapping[0].source
         file = storage_client.files.export_to_file(file_id=file_id, path_name='data')
-        # TODO: validate that returned object actually contains full_path attribute
         return file.full_path
 
     def _validate_template(self, plaintext=True) -> ValidationResult:
         self._init_configuration()
         in_table_path = self._download_table_from_storage_api()
         with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table, quotechar='\'')
+            reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
 
             if self.cfg.message_body_config.message_body_source == 'from_table':
@@ -328,9 +328,9 @@ class Component(ComponentBase):
         self._init_configuration()
         try:
             self.init_client()
-            return ValidationResult('✅ Connection successful!', MessageType.SUCCESS)
+            return ValidationResult('✅ - Connection established successfully!', MessageType.SUCCESS)
         except Exception:
-            return ValidationResult('❌ Connection failed', MessageType.DANGER)
+            return ValidationResult("❌ - Connection couldn't be established!", MessageType.DANGER)
 
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
@@ -369,57 +369,56 @@ class Component(ComponentBase):
                 except Exception as e:
                     message = str(e)
         print(message)
-        return ValidationResult(message, MessageType.SUCCESS)
+        message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
+        return ValidationResult(message, message_type)
 
     @sync_action('validate_attachments')
     def validate_attachments(self) -> ValidationResult:
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg.attachments_config.attachments_source == 'all_input_files':
+        if self.cfg.attachments_config.attachments_source != 'all_input_files':
+            input_filenames = self._list_input_filenames_in_sync_action()
+            in_table_path = self._download_table_from_storage_api()
+            expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
+            missing_attachments = expected_input_filenames - set(input_filenames)
+            if missing_attachments:
+                message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
             print(message)
-            return ValidationResult(message, MessageType.SUCCESS)
-
-        input_filenames = self._list_input_filenames_in_sync_action()
-        in_table_path = self._download_table_from_storage_api()
-        expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
-        missing_attachments = expected_input_filenames - set(input_filenames)
-        if missing_attachments:
-            message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
-        print(message)
-        return ValidationResult(message, MessageType.SUCCESS)
+        message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
+        return ValidationResult(message, message_type)
 
     @sync_action("validate_config")
     def validate_config(self):
         self._init_configuration()
-        messages = []
-        try:
-            self.init_client()
-            messages.append(VALID_CONNECTION_CONFIG_MESSAGE)
-        except Exception as e:
-            messages.append(f"❌ - Could not establish connection! - {e}")
+        validation_methods = (
+            self.test_smtp_server_connection,
+            self.validate_subject,
+            self.validate_plaintext_template,
+            self.validate_html_template,
+            self.validate_attachments)
 
-        for template_validation_method in (self.validate_plaintext_template, self.validate_html_template,
-                                           self.validate_subject):
-            template_validation_result = template_validation_method()
-            template_validation_result_message = template_validation_result.message
-            messages.append(template_validation_result_message)
-
-        attachments_validation_result_message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg.attachments_config.attachments_source == 'from_table':
-            attachments_validation_result = self.validate_attachments()
-            attachments_validation_result_message = attachments_validation_result.message
-        messages.append(attachments_validation_result_message)
+        messages = [validation_method().message for validation_method in validation_methods]
 
         if any(message.startswith('❌') for message in messages):
             message_base = '❌ - Config Invalid!\n'
+            message_type = MessageType.DANGER
         else:
             message_base = '✅ - Config Valid!\n'
+            message_type = MessageType.SUCCESS
+
         message = message_base + '\n'.join(messages)
         print(message)
-        if message.startswith('✅'):
-            return ValidationResult(message, MessageType.SUCCESS)
-        else:
-            return ValidationResult(message, MessageType.DANGER)
+        return ValidationResult(message, message_type)
+
+    @sync_action('debug_sync')
+    def debug_sync(self):
+        self._init_configuration()
+        token = self.environment_variables.token
+        messages = list()
+        messages.append(f'{token=}')
+        messages.append(table.source for table in self.configuration.tables_input_mapping)
+        # messages.append(file.source for file in self.configuration.files_input_mapping)
+        return ValidationResult('\n'.join(messages), MessageType.SUCCESS)
 
 
 """
