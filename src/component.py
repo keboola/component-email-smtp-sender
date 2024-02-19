@@ -13,7 +13,7 @@ from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
 from jinja2 import Template
 
-from configuration import Configuration, ConnectionConfig
+from configuration import Configuration, ConnectionConfig, SubjectConfig
 from client import SMTPClient
 
 
@@ -343,8 +343,7 @@ class Component(ComponentBase):
 
     @sync_action('validate_subject')
     def validate_subject(self) -> ValidationResult:
-        self._init_configuration()
-        subject_config = self.cfg.subject_config
+        subject_config = SubjectConfig.load_from_dict(self.configuration.parameters['subject_config'])
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
         if subject_config.subject_source == 'from_table':
