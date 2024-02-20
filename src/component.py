@@ -4,7 +4,7 @@ from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
-# import traceback
+import traceback
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
