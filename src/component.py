@@ -173,13 +173,13 @@ class Component(ComponentBase):
                         rendered_plaintext_message=rendered_plaintext_message,
                         rendered_html_message=rendered_html_message)
 
-                    logging.info(
-                        f"Sending email with subject: `{email_['Subject']}`"
-                        f" from `{email_['From']}` to `{email_['To']}`")
                     status = 'OK'
                     error_message = ''
                     if not dry_run:
                         try:
+                            logging.info(
+                                f"Sending email with subject: `{email_['Subject']}`"
+                                f" from `{email_['From']}` to `{email_['To']}`")
                             self._client.send_email(email_)
                         except Exception as e:
                             error_message = str(e)
