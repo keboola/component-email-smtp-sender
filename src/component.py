@@ -411,6 +411,7 @@ class Component(ComponentBase):
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
         self._init_configuration()
+        # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
         validation_methods = (
             self.test_smtp_server_connection_,
             self.validate_subject_,
