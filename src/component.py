@@ -4,7 +4,6 @@ from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
-# import traceback
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
@@ -338,8 +337,7 @@ class Component(ComponentBase):
     def __exit__(self):
         self._client._smtp_server.close()
 
-    @sync_action('testConnection')
-    def test_smtp_server_connection(self) -> ValidationResult:
+    def test_smtp_server_connection_(self) -> ValidationResult:
         connection_config = ConnectionConfig.load_from_dict(self.configuration.parameters['connection_config'])
         try:
             self.init_client(connection_config=connection_config)
@@ -347,8 +345,11 @@ class Component(ComponentBase):
         except Exception:
             return ValidationResult("❌ - Connection couldn't be established", MessageType.DANGER)
 
-    @sync_action('validate_subject')
-    def validate_subject(self) -> ValidationResult:
+    @sync_action('testConnection')
+    def test_smtp_server_connection(self) -> ValidationResult:
+        return self.test_smtp_server_connection_()
+
+    def validate_subject_(self) -> ValidationResult:
         subject_config = SubjectConfig.load_from_dict(self.configuration.parameters['subject_config'])
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
@@ -372,16 +373,25 @@ class Component(ComponentBase):
         message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
+    @sync_action('validate_subject')
+    def validate_subject(self) -> ValidationResult:
+        return self.validate_subject_()
+
+    def validate_plaintext_template_(self) -> ValidationResult:
+        return self._validate_template(plaintext=True)
+
     @sync_action('validate_plaintext_template')
     def validate_plaintext_template(self) -> ValidationResult:
-        return self._validate_template(plaintext=True)
+        return self.validate_plaintext_template_()
+
+    def validate_html_template_(self) -> ValidationResult:
+        return self._validate_template(plaintext=False)
 
     @sync_action('validate_html_template')
     def validate_html_template(self) -> ValidationResult:
-        return self._validate_template(plaintext=False)
+        return self.validate_html_template_()
 
-    @sync_action('validate_attachments')
-    def validate_attachments(self) -> ValidationResult:
+    def validate_attachments_(self) -> ValidationResult:
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
         if self.cfg.attachments_config.attachments_source != 'all_input_files':
@@ -394,32 +404,31 @@ class Component(ComponentBase):
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
+    @sync_action('validate_attachments')
+    def validate_attachments(self) -> ValidationResult:
+        return self.validate_attachments_()
+
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
-        return ValidationResult('updated', MessageType.SUCCESS)
-        # try:
-        #     self._init_configuration()
-        #     validation_methods = (
-        #         self.test_smtp_server_connection,
-        #         self.validate_subject,
-        #         self.validate_plaintext_template,
-        #         self.validate_html_template,
-        #         self.validate_attachments)
-        #
-        #     messages = [validation_method().message for validation_method in validation_methods]
-        #
-        #     if any(message.startswith('❌') for message in messages):
-        #         message_base = '❌ - Config Invalid\n'
-        #         message_type = MessageType.DANGER
-        #     else:
-        #         message_base = '✅ - Config Valid\n'
-        #         message_type = MessageType.SUCCESS
-        #
-        #     message = message_base + '\n'.join(messages)
-        #     print(message)
-        #     return ValidationResult(message, message_type)
-        # except Exception:
-        #     return ValidationResult(str(traceback.format_exc()), MessageType.DANGER)
+        self._init_configuration()
+        validation_methods = (
+            self.test_smtp_server_connection_,
+            self.validate_subject_,
+            self.validate_plaintext_template_,
+            self.validate_html_template_,
+            self.validate_attachments_)
+
+        messages = [validation_method().message for validation_method in validation_methods]
+
+        if any(message.startswith('❌') for message in messages):
+            message_base = '❌ - Config Invalid\n'
+            message_type = MessageType.DANGER
+        else:
+            message_base = '✅ - Config Valid\n'
+            message_type = MessageType.SUCCESS
+
+        message = message_base + '\n'.join(messages)
+        return ValidationResult(message, message_type)
 
 
 """
