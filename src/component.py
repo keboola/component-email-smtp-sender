@@ -4,7 +4,7 @@ from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
-import traceback
+# import traceback
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
@@ -396,30 +396,30 @@ class Component(ComponentBase):
 
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
-        return ValidationResult('retardation check', MessageType.DANGER)
-        # try:
-        #     self._init_configuration()
-        #     validation_methods = (
-        #         self.test_smtp_server_connection,
-        #         self.validate_subject,
-        #         self.validate_plaintext_template,
-        #         self.validate_html_template,
-        #         self.validate_attachments)
-        #
-        #     messages = [validation_method().message for validation_method in validation_methods]
-        #
-        #     if any(message.startswith('❌') for message in messages):
-        #         message_base = '❌ - Config Invalid\n'
-        #         message_type = MessageType.DANGER
-        #     else:
-        #         message_base = '✅ - Config Valid\n'
-        #         message_type = MessageType.SUCCESS
-        #
-        #     message = message_base + '\n'.join(messages)
-        #     print(message)
-        #     return ValidationResult(message, message_type)
-        # except Exception:
-        #     return ValidationResult(traceback.format_exc(), MessageType.DANGER)
+        # return ValidationResult('retardation check', MessageType.DANGER)
+        try:
+            self._init_configuration()
+            validation_methods = (
+                self.test_smtp_server_connection,
+                self.validate_subject,
+                self.validate_plaintext_template,
+                self.validate_html_template,
+                self.validate_attachments)
+
+            messages = [validation_method().message for validation_method in validation_methods]
+
+            if any(message.startswith('❌') for message in messages):
+                message_base = '❌ - Config Invalid\n'
+                message_type = MessageType.DANGER
+            else:
+                message_base = '✅ - Config Valid\n'
+                message_type = MessageType.SUCCESS
+
+            message = message_base + '\n'.join(messages)
+            print(message)
+            return ValidationResult(message, message_type)
+        except Exception:
+            return ValidationResult(traceback.format_exc(), MessageType.DANGER)
 
 
 """
