@@ -85,11 +85,8 @@
           "type": "boolean",
           "format": "checkbox",
           "title": "Use HTML Template",
-          "description": "if checked - specify HTML Template filename, column or definition",
+          "description": "Will appear in the email client for users who don't have HTML messages disallowed, if they do plaintext version is shown.\nif checked - specify HTML Template filename, column or definition",
           "default": true,
-          "options": {
-            "tooltip": "Will appear in the email client for users who don't have HTML messages disallowed, if they do plaintext version is shown."
-          },
           "propertyOrder": 7
         },
         "plaintext_template_column": {
