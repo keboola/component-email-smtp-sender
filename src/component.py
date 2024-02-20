@@ -428,7 +428,7 @@ class Component(ComponentBase):
             message_base = '✅ - Config Valid\n'
             message_type = MessageType.SUCCESS
 
-        message = message_base + '\n'.join(messages)
+        message = message_base + '\\n'.join(messages)
         return ValidationResult(message, message_type)
 
 
