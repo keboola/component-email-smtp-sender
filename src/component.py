@@ -200,7 +200,7 @@ class Component(ComponentBase):
                         subject=email_['Subject'],
                         plaintext_message_body=rendered_plaintext_message,
                         html_message_body=rendered_html_message_writable,
-                        attachment_filenames=json.dumps(list(attachments_paths_by_filename)),
+                        attachment_filenames=json.dumps(list(custom_attachments_paths_by_filename)),
                         error_message=error_message))
                     time.sleep(SLEEP_INTERVAL)
                 except Exception as e:
