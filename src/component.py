@@ -121,12 +121,13 @@ class Component(ComponentBase):
                 subject_template_text = subject_config.subject_template_definition
                 self._validate_template_text(subject_template_text, columns)
 
+            html_template_column = None
             if message_body_config.message_body_source == 'from_table':
                 plaintext_template_column = message_body_config.plaintext_template_column
-                html_template_column = message_body_config.html_template_column
+                if use_html_template:
+                    html_template_column = message_body_config.html_template_column
             else:
                 plaintext_template_column = None
-                html_template_column = None
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
                 if use_html_template:
