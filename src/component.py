@@ -74,8 +74,12 @@ class Component(ComponentBase):
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
+            self._results_writer.errors = False
             self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
+
+        if self._results_writer.errors:
+            raise UserException("Some emails couldn't be sent - check results.csv for more details.")
 
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
@@ -183,6 +187,7 @@ class Component(ComponentBase):
                         except Exception as e:
                             error_message = str(e)
                             status = 'ERROR'
+                            self._results_writer.errors = True
 
                     rendered_html_message_writable = ''
                     if rendered_html_message is not None:
@@ -207,6 +212,7 @@ class Component(ComponentBase):
                         'sender_email_address': self._client.sender_email_address,
                         'recipient_email_address': recipient_email_address,
                         'error_message': str(e)})
+                    self._results_writer.errors = True
 
     def _extract_template_files_full_paths(
             self, in_files_by_name: Dict[str, List[FileDefinition]]) -> Tuple[Union[str, None], Union[str, None]]:
