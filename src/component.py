@@ -78,8 +78,9 @@ class Component(ComponentBase):
             self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
 
-        if self._results_writer.errors:
-            raise UserException("Some emails couldn't be sent - check results.csv for more details.")
+        # TODO: uncomment once write_always is enabled in manifest
+        # if self._results_writer.errors:
+        #     raise UserException("Some emails couldn't be sent - check results.csv for more details.")
 
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
