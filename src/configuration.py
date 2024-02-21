@@ -93,12 +93,12 @@ class MessageBodyConfig(ConfigurationBase):
     """
     message_body_source: str = ''
     use_html_template: bool = False
-    plaintext_template_column: str = 'plaintext_template_column'
-    html_template_column: str = 'html_template_column'
-    plaintext_template_filename: str = 'plaintext_template_filename'
-    html_template_filename: str = 'html_template_filename'
-    plaintext_template_definition: str = 'plaintext_template_definition'
-    html_template_definition: str = 'html_template_definition'
+    plaintext_template_column: str = None
+    html_template_column: str = None
+    plaintext_template_filename: str = None
+    html_template_filename: str = None
+    plaintext_template_definition: str = None
+    html_template_definition: str = None
 
 
 @dataclass
