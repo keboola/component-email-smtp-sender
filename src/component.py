@@ -69,8 +69,7 @@ class Component(ComponentBase):
             for name, files in in_files_by_name.items()
             if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
 
-        # TODO: once on queue_v2 and using new python.component lib version plug write_always=True
-        results_table = self.create_out_table_definition('results.csv')
+        results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
@@ -78,9 +77,8 @@ class Component(ComponentBase):
             self.send_emails(in_table_path, attachments_paths_by_filename=attachments_paths_by_filename)
         self.write_manifest(results_table)
 
-        # TODO: uncomment once write_always is enabled in manifest
-        # if self._results_writer.errors:
-        #     raise UserException("Some emails couldn't be sent - check results.csv for more details.")
+        if self._results_writer.errors:
+            raise UserException("Some emails couldn't be sent - check results.csv for more details.")
 
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
