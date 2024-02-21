@@ -298,8 +298,7 @@ class Component(ComponentBase):
 
     def _init_storage_client(self) -> StorageClient:
         storage_token = self.environment_variables.token
-        # TODO: check whether we need to ask user for region of keboola connection
-        storage_client = StorageClient('https://connection.keboola.com', storage_token)
+        storage_client = StorageClient(self.environment_variables.url, storage_token)
         return storage_client
 
     def _download_table_from_storage_api(self) -> str:
