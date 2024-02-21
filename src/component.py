@@ -57,7 +57,7 @@ class Component(ComponentBase):
 
     def run(self):
         self._init_configuration()
-        logging.info(self.environment_variables.get('KBC_URL'))
+        logging.info(self.environment_variables.url)
         self.init_client()
         in_tables = self.get_input_tables_definitions()
         in_files_by_name = self.get_input_file_definitions_grouped_by_name()
