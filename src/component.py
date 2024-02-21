@@ -430,13 +430,13 @@ class Component(ComponentBase):
         messages = [validation_method().message for validation_method in validation_methods]
 
         if any(message.startswith('❌') for message in messages):
-            message_base = '❌ - Config Invalid\n'
+            message_base = '❌ - Config Invalid\n\n'
             message_type = MessageType.DANGER
         else:
-            message_base = '✅ - Config Valid\n'
+            message_base = '✅ - Config Valid\n\n'
             message_type = MessageType.SUCCESS
 
-        message = message_base + '\n'.join(messages)
+        message = message_base + '\n\n'.join(messages)
         return ValidationResult(message, message_type)
 
 
