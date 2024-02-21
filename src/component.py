@@ -420,12 +420,13 @@ class Component(ComponentBase):
     def validate_config(self) -> ValidationResult:
         self._init_configuration()
         # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
-        validation_methods = (
+        validation_methods = [
             self.test_smtp_server_connection_,
             self.validate_subject_,
             self.validate_plaintext_template_,
-            self.validate_html_template_,
-            self.validate_attachments_)
+            self.validate_attachments_]
+        if self.cfg.message_body_config.use_html_template:
+            validation_methods.insert(3, self.validate_html_template_)
 
         messages = [validation_method().message for validation_method in validation_methods]
 
