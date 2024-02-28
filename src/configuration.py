@@ -53,6 +53,14 @@ class ConfigurationBase:
 
 
 @dataclass
+class OAuthConfig(ConfigurationBase):
+    sender_email_address: Union[str, None] = None
+    tenant_id: Union[str, None] = None
+    client_id: Union[str, None] = None
+    pswd_client_secret: Union[str, None] = None
+
+
+@dataclass
 class ProxyServerConfig(ConfigurationBase):
     proxy_server_host: Union[str, None] = None
     proxy_server_port: Union[int, None] = None
@@ -61,9 +69,9 @@ class ProxyServerConfig(ConfigurationBase):
 
 
 @dataclass
-class ConnectionConfig(ConfigurationBase):
-    sender_email_address: str
-    pswd_sender_password: str
+class CredentialsConfig(ConfigurationBase):
+    sender_email_address: Union[str, None] = None
+    pswd_sender_password: Union[str, None] = None
     server_host: str = 'smtp.gmail.com'
     server_port: int = 465
     connection_protocol: str = 'SSL'
@@ -72,13 +80,26 @@ class ConnectionConfig(ConfigurationBase):
 
 
 @dataclass
+class ConnectionConfig(ConfigurationBase):
+    use_oauth: bool = False
+    oauth_config: OAuthConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    creds_config: CredentialsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+
+
+@dataclass
+class BasicEmailOptions(ConfigurationBase):
+    subject: Union[str, None] = None
+    message_body: Union[str, None] = None
+
+
+@dataclass
 class SubjectConfig(ConfigurationBase):
     """
     subject_source:
     "from_table" -> "subject_column"
-    "from_template_definition" -> "subject_template"
+    "from_template_definition" -> "subject_template_definition"
     """
-    subject_source: str
+    subject_source: Union[str, None] = None
     subject_column: Union[str, None] = None
     subject_template_definition: Union[str, None] = None
 
@@ -91,7 +112,7 @@ class MessageBodyConfig(ConfigurationBase):
     "from_template_file" -> "plaintext_template_filename" + "html_template_filename"
     "from_template_definition" -> "plaintext_template_definition" + "html_template_definition"
     """
-    message_body_source: str = ''
+    message_body_source: Union[str, None] = None
     use_html_template: bool = False
     plaintext_template_column: Union[str, None] = None
     html_template_column: Union[str, None] = None
@@ -108,16 +129,24 @@ class AttachmentsConfig(ConfigurationBase):
     "all_input_files"
     "from_table" -> "attachments_column"
     """
-    attachments_source: str = 'all_input_files'
+    attachments_source: Union[str, None] = None
     attachments_column: Union[str, None] = None
+
+
+@dataclass
+class AdvancedEmailOptions(ConfigurationBase):
+    subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
 
 
 @dataclass
 class Configuration(ConfigurationBase):
     connection_config: ConnectionConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    email_data_table_name: Union[str, None] = None
     recipient_email_address_column: str = 'recipient_email_address'
-    subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    use_advanced_options: bool = False
+    basic_options: BasicEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    advanced_options: AdvancedEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     continue_on_error: bool = True
     dry_run: bool = False

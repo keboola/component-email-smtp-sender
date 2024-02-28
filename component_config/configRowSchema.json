@@ -4,230 +4,266 @@
   "properties": {
     "recipient_email_address_column": {
       "type": "string",
-      "watch": {
-        "columns": "_metadata_.table.columns"
-      },
       "title": "Recipient Email Address Column",
-      "enumSource": "columns",
       "required": true,
-      "propertyOrder": 2
+      "propertyOrder": 1
     },
-    "subject_config": {
-      "title": "Subject Config",
-      "type": "object",
-      "propertyOrder": 3,
-      "properties": {
-        "subject_source": {
-          "title": "Subject Source",
-          "type": "string",
-          "enum": ["from_table", "from_template_definition"],
-          "options": {
-            "enum_titles": ["From Table", "From Template Definition"],
-            "tooltip": "**From Table** - specify column which contains subject template/text in Jinja2 format \n- example use case - You want to have different subject for different recipients.\n\n**From Template Definition** - paste the subject template/text into the text area field \n- example use case - You want all recipients to receive similar subject template/text"
-          },
-          "propertyOrder": 1
-        },
-        "subject_column": {
-          "type": "string",
-          "watch": {
-            "columns": "_metadata_.table.columns"
-          },
-          "title": "Subject Column",
-          "propertyOrder": 2,
-          "default": "subject",
-          "enumSource": "columns",
-          "required": true,
-          "options": {
-            "dependencies": {"subject_source":  "from_table"}
-          }
-        },
-        "subject_template_definition": {
-          "propertyOrder": 3,
-          "type": "string",
-          "title": "Plaintext Subject Template",
-          "default": "Hello {{recipient_name}}",
-          "format": "textarea",
-          "options": {
-            "input_height": "100px",
-            "dependencies": {"subject_source":  "from_template_definition"}
-          }
-        },
-        "validate_subject": {
-            "type": "button",
-            "format": "sync-action",
-            "description": "Checks, whether all placeholders in your subject template are contained in the input table",
-            "propertyOrder": 7,
-            "options": {
-              "async": {
-                "label": "VALIDATE SUBJECT",
-                "action": "validate_subject"
-              }
-            }
-          }
-        }
+    "use_advanced_options": {
+      "title": "Use Advanced Options",
+      "type": "boolean",
+      "format": "checkbox",
+      "description": "if checked - opens up advanced options",
+      "default": false,
+      "propertyOrder": 4
     },
-    "message_body_config": {
-      "title": "Message Body Config",
+    "basic_options": {
+      "title": "Basic Options",
       "type": "object",
-      "propertyOrder": 4,
+      "propertyOrder": 2,
+      "options": {"dependencies": {"use_advanced_options": false}},
       "properties": {
-        "message_body_source": {
-          "title": "Message Body Source",
+        "subject": {
+          "propertyOrder": 1,
           "type": "string",
-          "enum": ["from_table", "from_template_file", "from_template_definition"],
+          "title": "Subject",
+          "default": "Example subject",
+          "format": "textarea",
           "options": {
-            "enum_titles": ["From Table", "From Template File", "From Template Definition"],
-            "tooltip": "**From Table** - specify column which contains template in Jinja2 format \n- example use case - You want to have different template/message for different recipients.\n\n**From Template File** - specify input file name containing the template in Jinja2 format \n- example use case - you want each recipient to receive similar template (with differently filled placeholders), and have an orchestration which spawns this template, so that this configuration has the template updated automatically\n\n**From Template Definition** - paste the template text into the text area field \n- example use case - You want all recipients to receive similar template and it will not be changed often."
-          },
-          "propertyOrder": 1
+            "input_height": "100px"
+          }
         },
-        "use_html_template": {
-          "type": "boolean",
-          "format": "checkbox",
-          "title": "Use HTML Template",
-          "description": "Will appear in the email client for users who don't have HTML messages disallowed, if they do plaintext version is shown.<br>if checked - specify HTML Template filename, column or definition",
-          "default": true,
-          "propertyOrder": 7
-        },
-        "plaintext_template_column": {
-          "type": "string",
-          "watch": {
-            "columns": "_metadata_.table.columns"
-          },
-          "title": "Plaintext Message Template Column",
-          "enumSource": "columns",
+        "message_body": {
           "propertyOrder": 2,
-          "options": {
-            "dependencies": {"message_body_source": "from_table"}
-          }
-        },
-        "html_template_column": {
           "type": "string",
-          "watch": {
-            "columns": "_metadata_.table.columns"
-          },
-          "title": "HTML Message Template Column",
-          "enumSource": "columns",
-          "propertyOrder": 8,
-          "options": {
-            "dependencies": {
-              "use_html_template": true,
-              "message_body_source": "from_table"}
-          }
-        },
-        "plaintext_template_filename": {
-          "type": "string",
-          "title": "Plaintext Template Filename",
-          "default": "template.txt",
-          "propertyOrder": 4,
-          "options": {
-            "dependencies": {"message_body_source": "from_template_file"}
-          }
-        },
-        "html_template_filename": {
-          "type": "string",
-          "title": "HTML Template Filename",
-          "default": "template.html",
-          "propertyOrder": 8,
-          "options": {
-            "dependencies": {
-              "use_html_template": true,
-              "message_body_source": "from_template_file"}
-          }
-        },
-        "plaintext_template_definition": {
-          "propertyOrder": 6,
-          "type": "string",
-          "title": "Plaintext Message Body Template",
-          "default": "Hello {{recipient_name}}! This is example message body.",
+          "title": "Message Body",
+          "default": "Example message body.",
           "format": "textarea",
           "options": {
-            "input_height": "100px",
-            "dependencies": {"message_body_source": "from_template_definition"}
-          }
-        },
-        "validate_plaintext_template": {
-          "type": "button",
-          "format": "sync-action",
-          "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
-          "propertyOrder": 7,
-          "options": {
-            "async": {
-              "label": "VALIDATE PLAINTEXT TEMPLATE",
-              "action": "validate_plaintext_template"
-            }
-          }
-        },
-        "html_template_definition": {
-          "propertyOrder": 8,
-          "type": "string",
-          "title": "HTML Message Body Template",
-          "format": "textarea",
-          "default": "<h3>Hello {{recipient_name}}!</h3><p>This is example message body.</p>",
-          "options": {
-            "input_height": "100px",
-            "dependencies": {
-              "use_html_template": true,
-              "message_body_source": "from_template_definition"}
-          }
-        },
-        "validate_html_template": {
-          "type": "button",
-          "format": "sync-action",
-          "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
-          "propertyOrder": 9,
-          "options": {
-            "async": {
-              "label": "VALIDATE HTML TEMPLATE",
-              "action": "validate_html_template"
-            },
-            "dependencies": {
-              "use_html_template": true
-            }
+            "input_height": "100px"
           }
         }
       }
     },
-    "attachments_config": {
-      "title": "Attachments Config",
+    "advanced_options": {
+      "title": "Advanced Options",
       "type": "object",
       "propertyOrder": 5,
+      "options": {"dependencies": {"use_advanced_options": true}},
       "properties": {
-        "attachments_source": {
-          "title": "Attachments Source",
-          "type": "string",
-          "propertyOrder": 1,
-          "enum": ["from_table", "all_input_files"],
-          "options": {
-            "enum_titles": ["From Table", "All Input Files"],
-            "tooltip": "**From Table** - expects column to be a json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+        "subject_config": {
+          "title": "Subject Config",
+          "type": "object",
+          "propertyOrder": 3,
+          "properties": {
+            "subject_source": {
+              "title": "Subject Source",
+              "type": "string",
+              "enum": ["from_table", "from_template_definition"],
+              "options": {
+                "enum_titles": ["From Table", "From Template Definition"],
+                "tooltip": "**From Table** - specify column which contains subject template/text in Jinja2 format \n- example use case - You want to have different subject for different recipients.\n\n**From Template Definition** - paste the subject template/text into the text area field \n- example use case - You want all recipients to receive similar subject template/text"
+              },
+              "propertyOrder": 1
+            },
+            "subject_column": {
+              "type": "string",
+              "title": "Subject Column",
+              "propertyOrder": 2,
+              "default": "subject",
+              "required": true,
+              "options": {
+                "dependencies": {"subject_source":  "from_table"}
+              }
+            },
+            "subject_template_definition": {
+              "propertyOrder": 3,
+              "type": "string",
+              "title": "Plaintext Subject Template",
+              "default": "Example subject",
+              "format": "textarea",
+              "options": {
+                "input_height": "100px",
+                "dependencies": {"subject_source":  "from_template_definition"}
+              }
+            },
+            "validate_subject": {
+                "type": "button",
+                "format": "sync-action",
+                "description": "Checks, whether all placeholders in your subject template are contained in the input table",
+                "propertyOrder": 7,
+                "options": {
+                  "async": {
+                    "label": "VALIDATE SUBJECT",
+                    "action": "validate_subject"
+                  }
+                }
+              }
+            }
+        },
+        "message_body_config": {
+          "title": "Message Body Config",
+          "type": "object",
+          "propertyOrder": 4,
+          "properties": {
+            "message_body_source": {
+              "title": "Message Body Source",
+              "type": "string",
+              "enum": ["from_table", "from_template_file", "from_template_definition"],
+              "options": {
+                "enum_titles": ["From Table", "From Template File", "From Template Definition"],
+                "tooltip": "**From Table** - specify column which contains template in Jinja2 format \n- example use case - You want to have different template/message for different recipients.\n\n**From Template File** - specify input file name containing the template in Jinja2 format \n- example use case - you want each recipient to receive similar template (with differently filled placeholders), and have an orchestration which spawns this template, so that this configuration has the template updated automatically\n\n**From Template Definition** - paste the template text into the text area field \n- example use case - You want all recipients to receive similar template and it will not be changed often."
+              },
+              "propertyOrder": 1
+            },
+            "use_html_template": {
+              "type": "boolean",
+              "format": "checkbox",
+              "title": "Use HTML Template",
+              "description": "Will appear in the email client for users who don't have HTML messages disallowed, if they do plaintext version is shown.<br>if checked - specify HTML Template filename, column or definition",
+              "default": true,
+              "propertyOrder": 7
+            },
+            "plaintext_template_column": {
+              "type": "string",
+              "title": "Plaintext Message Template Column",
+              "propertyOrder": 2,
+              "options": {
+                "dependencies": {"message_body_source": "from_table"}
+              }
+            },
+            "html_template_column": {
+              "type": "string",
+              "title": "HTML Message Template Column",
+              "propertyOrder": 8,
+              "options": {
+                "dependencies": {
+                  "use_html_template": true,
+                  "message_body_source": "from_table"}
+              }
+            },
+            "plaintext_template_filename": {
+              "type": "string",
+              "title": "Plaintext Template Filename",
+              "default": "template.txt",
+              "propertyOrder": 4,
+              "options": {
+                "dependencies": {"message_body_source": "from_template_file"}
+              }
+            },
+            "html_template_filename": {
+              "type": "string",
+              "title": "HTML Template Filename",
+              "default": "template.html",
+              "propertyOrder": 8,
+              "options": {
+                "dependencies": {
+                  "use_html_template": true,
+                  "message_body_source": "from_template_file"}
+              }
+            },
+            "plaintext_template_definition": {
+              "propertyOrder": 6,
+              "type": "string",
+              "title": "Plaintext Message Body Template",
+              "default": "Example message body.",
+              "format": "textarea",
+              "options": {
+                "input_height": "100px",
+                "dependencies": {"message_body_source": "from_template_definition"}
+              }
+            },
+            "validate_plaintext_template": {
+              "type": "button",
+              "format": "sync-action",
+              "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+              "propertyOrder": 7,
+              "options": {
+                "async": {
+                  "label": "VALIDATE PLAINTEXT TEMPLATE",
+                  "action": "validate_plaintext_template"
+                }
+              }
+            },
+            "html_template_definition": {
+              "propertyOrder": 8,
+              "type": "string",
+              "title": "HTML Message Body Template",
+              "format": "textarea",
+              "default": "<h3>Example message body title</h3><p>Example message body paragraph.</p>",
+              "options": {
+                "input_height": "100px",
+                "dependencies": {
+                  "use_html_template": true,
+                  "message_body_source": "from_template_definition"}
+              }
+            },
+            "validate_html_template": {
+              "type": "button",
+              "format": "sync-action",
+              "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+              "propertyOrder": 9,
+              "options": {
+                "async": {
+                  "label": "VALIDATE HTML TEMPLATE",
+                  "action": "validate_html_template"
+                },
+                "dependencies": {
+                  "use_html_template": true
+                }
+              }
+            }
           }
         },
-        "attachments_column": {
-          "type": "string",
-          "description": "column is expected to contain a json list of attachment names, associated with specific emails",
-          "watch": {
-            "columns": "_metadata_.table.columns"
-          },
-          "title": "Attachments Column",
-          "enumSource": "columns",
-          "required": true,
-          "propertyOrder": 2,
-          "options": {
-            "dependencies": {"attachments_source":  "from_table"}
+        "attachments_config": {
+          "title": "Attachments Config",
+          "type": "object",
+          "propertyOrder": 5,
+          "properties": {
+            "attachments_source": {
+              "title": "Attachments Source",
+              "type": "string",
+              "propertyOrder": 1,
+              "enum": ["from_table", "all_input_files"],
+              "options": {
+                "enum_titles": ["From Table", "All Input Files"],
+                "tooltip": "**From Table** - expects column to be a json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+              }
+            },
+            "attachments_column": {
+              "type": "string",
+              "description": "column is expected to contain a json list of attachment names, associated with specific emails",
+              "title": "Attachments Column",
+              "required": true,
+              "propertyOrder": 2,
+              "options": {
+                "dependencies": {"attachments_source":  "from_table"}
+              }
+            },
+            "validate_attachments": {
+              "type": "button",
+              "format": "sync-action",
+              "description": "Validates All attachments are present in file input mapping (excluding the template files)",
+              "propertyOrder": 3,
+              "options": {
+                "async": {
+                  "label": "VALIDATE ATTACHMENTS",
+                  "action": "validate_attachments"
+                },
+                "dependencies": {"attachments_source":  "from_table"}
+              }
+            }
           }
         },
-        "validate_attachments": {
+        "validate_config": {
           "type": "button",
           "format": "sync-action",
-          "description": "Validates All attachments are present in file input mapping (excluding the template files)",
-          "propertyOrder": 3,
+          "description": "Validates the whole config",
+          "propertyOrder": 8,
           "options": {
             "async": {
-              "label": "VALIDATE ATTACHMENTS",
-              "action": "validate_attachments"
-            },
-            "dependencies": {"attachments_source":  "from_table"}
+              "label": "VALIDATE CONFIG",
+              "action": "validate_config"
+            }
           }
         }
       }
@@ -237,7 +273,7 @@
       "format": "checkbox",
       "title": "Dry run",
       "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
-      "default": true,
+      "default": false,
       "propertyOrder": 6
     },
     "continue_on_error": {
@@ -247,18 +283,6 @@
       "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
       "default": true,
       "propertyOrder": 7
-    },
-    "validate_config": {
-      "type": "button",
-      "format": "sync-action",
-      "description": "Validates the whole config",
-      "propertyOrder": 8,
-      "options": {
-        "async": {
-          "label": "VALIDATE CONFIG",
-          "action": "validate_config"
-        }
-      }
     }
   }
 }
