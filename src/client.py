@@ -1,5 +1,7 @@
 import logging
 from typing import Union, Dict
+import os
+import json
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -10,6 +12,8 @@ import smtplib
 import socket
 import socks
 from keboola.component import UserException
+from O365 import Account
+import msal
 
 
 class SMTPClient:
@@ -19,12 +23,16 @@ class SMTPClient:
     def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
                  proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
-                 connection_protocol: str = 'SSL'):
+                 connection_protocol: str = 'SSL', use_oauth: bool = False, tenant_id: Union[str, None] = None,
+                 client_id: Union[str, None] = None, client_secret: Union[str, None] = None):
 
         self.sender_email_address = sender_email_address
         self.password = password
         self.server_host = server_host
         self.server_port = server_port
+        self.tenant_id = tenant_id
+        self.client_id = client_id
+        self.client_secret = client_secret
 
         if proxy_server_host:
             socks.setdefaultproxy(proxy_type=socks.PROXY_TYPE_SOCKS5, addr=proxy_server_host, port=proxy_server_port,
@@ -32,7 +40,11 @@ class SMTPClient:
             socket.socket = socks.socksocket
             socks.wrapmodule(smtplib)
 
-        if connection_protocol == 'SSL':
+        if use_oauth:
+            logging.info('Using O365 SMTP server')
+            self.init_smtp_server = self._init_o365_smtp_server
+            self.send_email = self.send_email_via_o365_oauth
+        elif connection_protocol == 'SSL':
             logging.info('Using SSL SMTP server')
             self.init_smtp_server = self._init_ssl_smtp_server
             self.send_email = self._send_email_via_ssl_server
@@ -76,15 +88,39 @@ class SMTPClient:
         server = smtplib.SMTP(self.server_host, self.server_port)
         server.starttls()
         server.login(self.sender_email_address, self.password)
-        self._smtp_server = server
+        self.smtp_server = server
+
+    def _send_email_via_tls_server(self, email: MIMEMultipart, **kwargs) -> None:
+        self.smtp_server.sendmail(self.sender_email_address, email['To'], email)
 
     def _init_ssl_smtp_server(self) -> None:
         server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port)
         server.login(self.sender_email_address, self.password)
-        self._smtp_server = server
+        self.smtp_server = server
 
-    def _send_email_via_tls_server(self, email: MIMEMultipart) -> None:
-        self._smtp_server.sendmail(self.sender_email_address, email['To'], email)
+    def _send_email_via_ssl_server(self, email: MIMEMultipart, **kwargs) -> None:
+        self.smtp_server.send_message(email)
 
-    def _send_email_via_ssl_server(self, email: MIMEMultipart) -> None:
-        self._smtp_server.send_message(email)
+    def _init_o365_smtp_server(self) -> None:
+        def get_access_token() -> Dict[str, Union[str, int]]:
+            authority = f"https://login.microsoftonline.com/{self.tenant_id}"
+            app = msal.ConfidentialClientApplication(self.client_id, authority=authority,
+                                                     client_credential=self.client_secret)
+            result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+            if "access_token" in result:
+                return result
+            raise Exception(f"Failed to acquire token: {result.get('error')}")
+
+        access_token_result = get_access_token()
+        os.environ['O365TOKEN'] = json.dumps(access_token_result)
+        account = Account(credentials=(self.client_id, self.client_secret),
+                          auth_flow_type='credentials', tenant_id=self.tenant_id)
+        account.authenticate()
+        self.smtp_server = account
+
+    def send_email_via_o365_oauth(self, email: MIMEMultipart, message: str, **kwargs) -> None:
+        email_ = self.smtp_server.new_message(resource=self.sender_email_address)
+        email_.to.add(email['To'])
+        email_.subject = email['Subject']
+        email_.body = message
+        email_.send()
