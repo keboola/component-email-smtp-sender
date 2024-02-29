@@ -276,12 +276,12 @@
               "enum": ["from_table", "all_input_files"],
               "options": {
                 "enum_titles": ["From Table", "All Input Files"],
-                "tooltip": "**From Table** - expects column to be a json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
               }
             },
             "attachments_column": {
               "type": "string",
-              "description": "column is expected to contain a json list of attachment names, associated with specific emails",
+              "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
               "title": "Attachments Column",
               "required": true,
               "propertyOrder": 2,
