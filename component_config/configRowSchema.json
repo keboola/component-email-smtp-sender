@@ -161,7 +161,7 @@
               "type": "boolean",
               "format": "checkbox",
               "title": "Use HTML Template",
-              "description": "Will appear in the email client for users who don't have HTML messages disallowed, if they do plaintext version is shown.<br>if checked - specify HTML Template filename, column or definition",
+              "description": "HTML version is the primary displayed message, if recipients inbox doesn't support HTML, the message defaults to the plaintext version",
               "default": true,
               "propertyOrder": 7
             },
