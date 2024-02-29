@@ -85,11 +85,22 @@
               }
             },
             "recipient_email_address_column": {
-              "type": "string",
+              "type": "array",
               "title": "Recipient Email Address Column",
-              "required": true,
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "format": "select",
+              "uniqueItems": true,
               "propertyOrder": 3,
-              "options": {"dependencies": {"recipients_source": "from_table"}}
+              "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_input_table_columns"
+                },
+                "dependencies": {"recipients_source": "from_table"}
+              }
             },
             "recipient_email_addresses": {
               "title": "Recipient Email Addresses",
@@ -117,12 +128,21 @@
               "propertyOrder": 1
             },
             "subject_column": {
-              "type": "string",
+              "type": "array",
               "title": "Subject Column",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "format": "select",
+              "uniqueItems": true,
               "propertyOrder": 2,
-              "required": true,
               "options": {
-                "dependencies": {"subject_source":  "from_table"}
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_input_table_columns"
+                },
+                "dependencies": {"subject_source": "from_table"}
               }
             },
             "subject_template_definition": {
@@ -174,21 +194,42 @@
               "propertyOrder": 7
             },
             "plaintext_template_column": {
-              "type": "string",
+              "type": "array",
               "title": "Plaintext Message Template Column",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "format": "select",
+              "uniqueItems": true,
               "propertyOrder": 2,
               "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_input_table_columns"
+                },
                 "dependencies": {"message_body_source": "from_table"}
               }
             },
             "html_template_column": {
-              "type": "string",
+              "type": "array",
               "title": "HTML Message Template Column",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "format": "select",
+              "uniqueItems": true,
               "propertyOrder": 8,
               "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_input_table_columns"
+                },
                 "dependencies": {
                   "use_html_template": true,
-                  "message_body_source": "from_table"}
+                  "message_body_source": "from_table"
+                }
               }
             },
             "plaintext_template_filename": {
@@ -280,12 +321,21 @@
               }
             },
             "attachments_column": {
-              "type": "string",
-              "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
+              "type": "array",
               "title": "Attachments Column",
-              "required": true,
+              "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "format": "select",
+              "uniqueItems": true,
               "propertyOrder": 2,
               "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_input_table_columns"
+                },
                 "dependencies": {"attachments_source":  "from_table"}
               }
             },

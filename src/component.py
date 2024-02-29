@@ -7,7 +7,7 @@ import json
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
-from keboola.component.sync_actions import ValidationResult, MessageType
+from keboola.component.sync_actions import ValidationResult, MessageType, SelectElement
 from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
 from jinja2 import Template
@@ -340,9 +340,9 @@ class Component(ComponentBase):
         storage_client = StorageClient(self.environment_variables.url, storage_token)
         return storage_client
 
-    def _download_table_from_storage_api(self) -> str:
+    def _download_table_from_storage_api(self, table_name) -> str:
         storage_client = self._init_storage_client()
-        table_id = self.configuration.tables_input_mapping[0].source
+        table_id = next(table.source for table in self.configuration.tables_input_mapping if table.name == table_name)
         table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
         return table_path
 
@@ -362,7 +362,8 @@ class Component(ComponentBase):
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         self._init_configuration()
-        in_table_path = self._download_table_from_storage_api()
+        table_name = self.cfg.advanced_options.email_data_table_name
+        in_table_path = self._download_table_from_storage_api(table_name)
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
@@ -393,6 +394,14 @@ class Component(ComponentBase):
     def test_smtp_server_connection(self) -> ValidationResult:
         return self.test_smtp_server_connection_()
 
+    @sync_action('load_input_table_columns')
+    def load_input_table_columns(self) -> List[SelectElement]:
+        table_name = self.cfg.advanced_options.email_data_table_name
+        table_path = self._download_table_from_storage_api(table_name)
+        with open(table_path) as in_file:
+            reader = csv.DictReader(in_file)
+            return [SelectElement(column) for column in reader.fieldnames]
+
     def validate_subject_(self) -> ValidationResult:
         subject_config = SubjectConfig.load_from_dict(self.configuration.parameters.advanced_options['subject_config'])
         message = VALID_SUBJECT_MESSAGE
@@ -400,7 +409,8 @@ class Component(ComponentBase):
         if subject_config.subject_source == 'from_table':
             subject_column = subject_config.subject_column
 
-        in_table_path = self._download_table_from_storage_api()
+        table_name = self.cfg.advanced_options.email_data_table_name
+        in_table_path = self._download_table_from_storage_api(table_name)
         with open(in_table_path) as in_table:
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
@@ -440,7 +450,8 @@ class Component(ComponentBase):
         message = VALID_ATTACHMENTS_MESSAGE
         if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
             input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
-            in_table_path = self._download_table_from_storage_api()
+            table_name = self.cfg.advanced_options.email_data_table_name
+            in_table_path = self._download_table_from_storage_api(table_name)
             expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
             missing_attachments = expected_input_filenames - set(input_filenames)
             if missing_attachments:
