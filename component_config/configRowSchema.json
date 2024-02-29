@@ -61,6 +61,15 @@
       "propertyOrder": 3,
       "options": {"dependencies": {"configuration_type": "advanced"}},
       "properties": {
+        "email_data_table_name": {
+          "title": "Email Data Table Name",
+          "type": "string",
+          "description": "name of the table with recipient email addresses, placeholders, other columns depending on your config",
+          "propertyOrder": 1,
+          "options": {
+            "dependencies": {"recipients_source": "from_table"}
+          }
+        },
         "recipients_config": {
           "title": "Recipients Config",
           "propertyOrder": 1,
@@ -68,7 +77,7 @@
             "recipients_source": {
               "title": "Recipients Source",
               "type": "string",
-              "propertyOrder": 1,
+              "propertyOrder": 2,
               "enum": ["from_table", "from_definition"],
               "options": {
                 "enum_titles": ["From Table", "From Definition"],
@@ -79,16 +88,16 @@
               "type": "string",
               "title": "Recipient Email Address Column",
               "required": true,
-              "propertyOrder": 2,
+              "propertyOrder": 3,
               "options": {"dependencies": {"recipients_source": "from_table"}}
             },
             "recipient_email_addresses": {
               "title": "Recipient Email Addresses",
               "type": "string",
+              "propertyOrder": 4,
               "options": {
                 "dependencies": {"recipients_source": "from_definition"}
-              },
-              "propertyOrder": 3
+              }
             }
           }
         },
@@ -111,7 +120,6 @@
               "type": "string",
               "title": "Subject Column",
               "propertyOrder": 2,
-              "default": "subject",
               "required": true,
               "options": {
                 "dependencies": {"subject_source":  "from_table"}
