@@ -164,7 +164,7 @@ class AdvancedEmailOptions(ConfigurationBase):
 @dataclass
 class Configuration(ConfigurationBase):
     connection_config: ConnectionConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    configuration_type: bool = False
+    configuration_type: Union[str, None] = None
     basic_options: BasicEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     advanced_options: AdvancedEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     continue_on_error: bool = True
