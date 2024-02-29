@@ -82,7 +82,6 @@ class Component(ComponentBase):
         if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
             attachments_paths_by_filename = {}
 
-
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
