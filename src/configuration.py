@@ -88,6 +88,12 @@ class ConnectionConfig(ConfigurationBase):
 
 @dataclass
 class BasicEmailOptions(ConfigurationBase):
+    """
+    recipient_email_addresses: comma delimited list of recipient email addresses
+    subject: subject of the email
+    message_body: body of the email
+    """
+    recipient_email_addresses: Union[str, None] = None
     subject: Union[str, None] = None
     message_body: Union[str, None] = None
 
@@ -135,6 +141,8 @@ class AttachmentsConfig(ConfigurationBase):
 
 @dataclass
 class AdvancedEmailOptions(ConfigurationBase):
+    email_data_table_name: Union[str, None] = None
+    recipient_email_address_column: Union[str, None] = None
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
@@ -143,8 +151,6 @@ class AdvancedEmailOptions(ConfigurationBase):
 @dataclass
 class Configuration(ConfigurationBase):
     connection_config: ConnectionConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    email_data_table_name: Union[str, None] = None
-    recipient_email_address_column: str = 'recipient_email_address'
     use_advanced_options: bool = False
     basic_options: BasicEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     advanced_options: AdvancedEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
