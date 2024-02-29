@@ -308,7 +308,7 @@
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 5,
+          "propertyOrder": 6,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",

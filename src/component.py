@@ -12,7 +12,7 @@ from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
 from jinja2 import Template
 
-from configuration import Configuration, ConnectionConfig, SubjectConfig
+from configuration import Configuration, ConnectionConfig, SubjectConfig, AdvancedEmailOptions
 from client import SMTPClient
 
 
@@ -396,10 +396,11 @@ class Component(ComponentBase):
 
     @sync_action('load_input_table_columns')
     def load_input_table_columns(self) -> List[SelectElement]:
-        table_name = self.cfg.advanced_options.email_data_table_name
+        advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
+        table_name = advanced_options.email_data_table_name
         table_path = self._download_table_from_storage_api(table_name)
-        with open(table_path) as in_file:
-            reader = csv.DictReader(in_file)
+        with open(table_path) as in_table:
+            reader = csv.DictReader(in_table)
             return [SelectElement(column) for column in reader.fieldnames]
 
     def validate_subject_(self) -> ValidationResult:
