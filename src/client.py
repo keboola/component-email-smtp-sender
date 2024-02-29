@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Dict
+from typing import Union, Dict, List
 import os
 import json
 
@@ -118,9 +118,11 @@ class SMTPClient:
         account.authenticate()
         self.smtp_server = account
 
-    def send_email_via_o365_oauth(self, email: MIMEMultipart, message: str, **kwargs) -> None:
+    def send_email_via_o365_oauth(self, email: MIMEMultipart, message_body: str, attachments_paths: List[str], **kwargs) -> None:
         email_ = self.smtp_server.new_message(resource=self.sender_email_address)
         email_.to.add(email['To'])
         email_.subject = email['Subject']
-        email_.body = message
+        email_.body = message_body
+        for attachment in attachments_paths:
+            email_.atachments.add(attachment)
         email_.send()
