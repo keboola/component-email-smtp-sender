@@ -5,9 +5,8 @@ import re
 import time
 import json
 
-from keboola.component.base import ComponentBase
+from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
-from keboola.component.base import sync_action
 from keboola.component.sync_actions import ValidationResult, MessageType
 from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
@@ -80,6 +79,9 @@ class Component(ComponentBase):
             if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
 
         attachments_paths_by_filename = {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
+        if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
+            attachments_paths_by_filename = {}
+
 
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
@@ -123,11 +125,12 @@ class Component(ComponentBase):
                     email_data_table_path: Union[str, None] = None) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
-        use_advanced_options = self.cfg.use_advanced_options
+        use_advanced_options = self.cfg.configuration_type == 'advanced'
         basic_options = self.cfg.basic_options
-        subject_config = self.cfg.advanced_options.subject_config
-        message_body_config = self.cfg.advanced_options.message_body_config
-        attachments_config = self.cfg.advanced_options.attachments_config
+        advanced_options = self.cfg.advanced_options
+        subject_config = advanced_options.subject_config
+        message_body_config = advanced_options.message_body_config
+        attachments_config = advanced_options.attachments_config
         use_html_template = message_body_config.use_html_template
 
         rendered_subject = basic_options.subject
@@ -165,13 +168,16 @@ class Component(ComponentBase):
                     attachments_column = attachments_config.attachments_column
         else:
             reader = iter(self.cfg.basic_options.recipient_email_addresses.split(','))
+            if advanced_options.recipients_config.recipients_source == 'from_definition':
+                reader = iter(advanced_options.recipients_config.recipient_email_addresses)
 
         for row in reader:
             try:
                 if not use_advanced_options:
                     recipient_email_address = row
                 else:
-                    recipient_email_address = row[self.cfg.advanced_options.recipient_email_address_column]
+                    if advanced_options.recipients_config.recipients_source == 'from_table':
+                        recipient_email_address = row[self.cfg.advanced_options.recipient_email_address_column]
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)

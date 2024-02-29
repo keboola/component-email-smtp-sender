@@ -96,6 +96,7 @@ class BasicEmailOptions(ConfigurationBase):
     recipient_email_addresses: Union[str, None] = None
     subject: Union[str, None] = None
     message_body: Union[str, None] = None
+    include_attachments: Union[bool, None] = None
 
 
 @dataclass
@@ -140,9 +141,21 @@ class AttachmentsConfig(ConfigurationBase):
 
 
 @dataclass
+class RecipientsConfig(ConfigurationBase):
+    """
+    attachments_source:
+    "from_definition" -> "recipient_email_addresses"
+    "from_table" -> "recipient_email_address_column"
+    """
+    recipients_source: Union[str, None] = None
+    recipient_email_address_column: Union[str, None] = None
+    recipient_email_addresses: Union[str, None] = None
+
+
+@dataclass
 class AdvancedEmailOptions(ConfigurationBase):
     email_data_table_name: Union[str, None] = None
-    recipient_email_address_column: Union[str, None] = None
+    recipients_config: RecipientsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
@@ -151,7 +164,7 @@ class AdvancedEmailOptions(ConfigurationBase):
 @dataclass
 class Configuration(ConfigurationBase):
     connection_config: ConnectionConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    use_advanced_options: bool = False
+    configuration_type: bool = False
     basic_options: BasicEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     advanced_options: AdvancedEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     continue_on_error: bool = True

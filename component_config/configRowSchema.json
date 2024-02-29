@@ -2,28 +2,31 @@
   "type": "object",
   "title": "SMTP sender configuration",
   "properties": {
-    "recipient_email_address_column": {
+    "configuration_type": {
+      "title": "Configuration Type",
       "type": "string",
-      "title": "Recipient Email Address Column",
-      "required": true,
-      "propertyOrder": 1
-    },
-    "use_advanced_options": {
-      "title": "Use Advanced Options",
-      "type": "boolean",
-      "format": "checkbox",
-      "description": "if checked - opens up advanced options",
-      "default": false,
-      "propertyOrder": 4
+      "enum": ["basic", "advanced"],
+      "propertyOrder": 1,
+      "options": {
+        "enum_titles": ["Basic", "Advanced"]
+      }
     },
     "basic_options": {
       "title": "Basic Options",
       "type": "object",
       "propertyOrder": 2,
-      "options": {"dependencies": {"use_advanced_options": false}},
+      "options": {"dependencies": {"configuration_type": "basic"}},
       "properties": {
+        "recipient_email_addresses": {
+          "title": "Recipient Email Addresses",
+          "type": "string",
+          "options": {
+            "tooltip": "Enter comma delimited list of recipient email addresses"
+          },
+          "propertyOrder": 1
+        },
         "subject": {
-          "propertyOrder": 1,
+          "propertyOrder": 2,
           "type": "string",
           "title": "Subject",
           "default": "Example subject",
@@ -33,7 +36,7 @@
           }
         },
         "message_body": {
-          "propertyOrder": 2,
+          "propertyOrder": 3,
           "type": "string",
           "title": "Message Body",
           "default": "Example message body.",
@@ -41,19 +44,58 @@
           "options": {
             "input_height": "100px"
           }
+        },
+        "include_attachments": {
+          "title": "Include Attachments",
+          "type": "boolean",
+          "format": "checkbox",
+          "description": "if checked - all tables and files in input mapping will be used as attachments",
+          "default": true,
+          "propertyOrder": 4
         }
       }
     },
     "advanced_options": {
       "title": "Advanced Options",
       "type": "object",
-      "propertyOrder": 5,
-      "options": {"dependencies": {"use_advanced_options": true}},
+      "propertyOrder": 3,
+      "options": {"dependencies": {"configuration_type": "advanced"}},
       "properties": {
+        "recipients_config": {
+          "title": "Recipients Config",
+          "propertyOrder": 1,
+          "properties": {
+            "recipients_source": {
+              "title": "Recipients Source",
+              "type": "string",
+              "propertyOrder": 1,
+              "enum": ["from_table", "from_definition"],
+              "options": {
+                "enum_titles": ["From Table", "From Definition"],
+                "tooltip": "**From Table** - specify column which contains recipient email addresses \n\n**From Definition** - enter comma delimited list of recipient email addresses"
+              }
+            },
+            "recipient_email_address_column": {
+              "type": "string",
+              "title": "Recipient Email Address Column",
+              "required": true,
+              "propertyOrder": 2,
+              "options": {"dependencies": {"recipients_source": "from_table"}}
+            },
+            "recipient_email_addresses": {
+              "title": "Recipient Email Addresses",
+              "type": "string",
+              "options": {
+                "dependencies": {"recipients_source": "from_definition"}
+              },
+              "propertyOrder": 3
+            }
+          }
+        },
         "subject_config": {
           "title": "Subject Config",
           "type": "object",
-          "propertyOrder": 3,
+          "propertyOrder": 4,
           "properties": {
             "subject_source": {
               "title": "Subject Source",
@@ -103,7 +145,7 @@
         "message_body_config": {
           "title": "Message Body Config",
           "type": "object",
-          "propertyOrder": 4,
+          "propertyOrder": 5,
           "properties": {
             "message_body_source": {
               "title": "Message Body Source",
