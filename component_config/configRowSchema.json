@@ -72,12 +72,12 @@
         },
         "recipients_config": {
           "title": "Recipients Config",
-          "propertyOrder": 1,
+          "propertyOrder": 2,
           "properties": {
             "recipients_source": {
               "title": "Recipients Source",
               "type": "string",
-              "propertyOrder": 2,
+              "propertyOrder": 1,
               "enum": ["from_table", "from_definition"],
               "options": {
                 "enum_titles": ["From Table", "From Definition"],
@@ -94,12 +94,12 @@
               "enum": [],
               "format": "select",
               "uniqueItems": true,
-              "propertyOrder": 3,
+              "propertyOrder": 2,
               "options": {
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_input_table_columns",
-                  "autoload": []
+                  "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
                 "dependencies": {"recipients_source": "from_table"}
               }
@@ -107,7 +107,7 @@
             "recipient_email_addresses": {
               "title": "Recipient Email Addresses",
               "type": "string",
-              "propertyOrder": 4,
+              "propertyOrder": 3,
               "options": {
                 "dependencies": {"recipients_source": "from_definition"}
               }
@@ -117,7 +117,7 @@
         "subject_config": {
           "title": "Subject Config",
           "type": "object",
-          "propertyOrder": 4,
+          "propertyOrder": 3,
           "properties": {
             "subject_source": {
               "title": "Subject Source",
@@ -144,7 +144,7 @@
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_input_table_columns",
-                  "autoload": []
+                  "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
                 "dependencies": {"subject_source": "from_table"}
               }
@@ -177,7 +177,7 @@
         "message_body_config": {
           "title": "Message Body Config",
           "type": "object",
-          "propertyOrder": 5,
+          "propertyOrder": 4,
           "properties": {
             "message_body_source": {
               "title": "Message Body Source",
@@ -212,7 +212,7 @@
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_input_table_columns",
-                  "autoload": []
+                  "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
                 "dependencies": {"message_body_source": "from_table"}
               }
@@ -232,7 +232,7 @@
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_input_table_columns",
-                  "autoload": []
+                  "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
                 "dependencies": {
                   "use_html_template": true,
@@ -316,7 +316,7 @@
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 6,
+          "propertyOrder": 5,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",
@@ -344,7 +344,7 @@
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_input_table_columns",
-                  "autoload": []
+                  "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
                 "dependencies": {"attachments_source":  "from_table"}
               }
