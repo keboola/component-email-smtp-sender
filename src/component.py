@@ -396,7 +396,7 @@ class Component(ComponentBase):
         return self.test_smtp_server_connection_()
 
     def load_input_table_columns_(self) -> List[SelectElement]:
-        # TODO: consider reusing this method for other sync actions which only need to read the input table for its columns
+        # TODO: consider reusing this method for other sync actions needing to read the input table for its columns
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
         table_path = self._download_table_from_storage_api(table_name)
