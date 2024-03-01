@@ -85,19 +85,21 @@
               }
             },
             "recipient_email_address_column": {
-              "type": "array",
+              "type": "string",
               "title": "Recipient Email Address Column",
               "items": {
                 "enum": [],
                 "type": "string"
               },
+              "enum": [],
               "format": "select",
               "uniqueItems": true,
               "propertyOrder": 3,
               "options": {
                 "async": {
                   "label": "Re-load columns",
-                  "action": "load_input_table_columns"
+                  "action": "load_input_table_columns",
+                  "autoload": []
                 },
                 "dependencies": {"recipients_source": "from_table"}
               }
@@ -128,8 +130,9 @@
               "propertyOrder": 1
             },
             "subject_column": {
-              "type": "array",
+              "type": "string",
               "title": "Subject Column",
+              "enum": [],
               "items": {
                 "enum": [],
                 "type": "string"
@@ -140,7 +143,8 @@
               "options": {
                 "async": {
                   "label": "Re-load columns",
-                  "action": "load_input_table_columns"
+                  "action": "load_input_table_columns",
+                  "autoload": []
                 },
                 "dependencies": {"subject_source": "from_table"}
               }
@@ -194,8 +198,9 @@
               "propertyOrder": 7
             },
             "plaintext_template_column": {
-              "type": "array",
+              "type": "string",
               "title": "Plaintext Message Template Column",
+              "enum": [],
               "items": {
                 "enum": [],
                 "type": "string"
@@ -206,14 +211,16 @@
               "options": {
                 "async": {
                   "label": "Re-load columns",
-                  "action": "load_input_table_columns"
+                  "action": "load_input_table_columns",
+                  "autoload": []
                 },
                 "dependencies": {"message_body_source": "from_table"}
               }
             },
             "html_template_column": {
-              "type": "array",
+              "type": "string",
               "title": "HTML Message Template Column",
+              "enum": [],
               "items": {
                 "enum": [],
                 "type": "string"
@@ -224,7 +231,8 @@
               "options": {
                 "async": {
                   "label": "Re-load columns",
-                  "action": "load_input_table_columns"
+                  "action": "load_input_table_columns",
+                  "autoload": []
                 },
                 "dependencies": {
                   "use_html_template": true,
@@ -321,8 +329,9 @@
               }
             },
             "attachments_column": {
-              "type": "array",
+              "type": "string",
               "title": "Attachments Column",
+              "enum": [],
               "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
               "items": {
                 "enum": [],
@@ -334,7 +343,8 @@
               "options": {
                 "async": {
                   "label": "Re-load columns",
-                  "action": "load_input_table_columns"
+                  "action": "load_input_table_columns",
+                  "autoload": []
                 },
                 "dependencies": {"attachments_source":  "from_table"}
               }
