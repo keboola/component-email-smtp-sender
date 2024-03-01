@@ -342,7 +342,8 @@ class Component(ComponentBase):
 
     def _download_table_from_storage_api(self, table_name) -> str:
         storage_client = self._init_storage_client()
-        table_id = next(table.source for table in self.configuration.tables_input_mapping if table.name == table_name)
+        table_id = next(table.source for table in self.configuration.tables_input_mapping
+                        if table.destination == table_name)
         table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
         return table_path
 
