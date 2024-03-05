@@ -124,7 +124,7 @@ class Component(ComponentBase):
                     email_data_table_path: Union[str, None] = None) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
-        use_advanced_options = self.cfg.configuration_type == 'advanced'
+        # use_advanced_options = self.cfg.configuration_type == 'advanced'
         basic_options = self.cfg.basic_options
         advanced_options = self.cfg.advanced_options
         recipients_config = advanced_options.recipients_config
@@ -137,26 +137,26 @@ class Component(ComponentBase):
         rendered_plaintext_message = basic_options.message_body
         rendered_html_message = None
         custom_attachments_paths_by_filename = attachments_paths_by_filename
+        subject_column = None
+        plaintext_template_column = None
+        html_template_column = None
 
         if email_data_table_path is not None:
             in_table = open(email_data_table_path)
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
 
-            subject_column = None
             if subject_config.subject_source == 'from_table':
                 subject_column = subject_config.subject_column
             else:
                 subject_template_text = subject_config.subject_template_definition
                 self._validate_template_text(subject_template_text, columns)
 
-            html_template_column = None
             if message_body_config.message_body_source == 'from_table':
                 plaintext_template_column = message_body_config.plaintext_template_column
                 if use_html_template:
                     html_template_column = message_body_config.html_template_column
             else:
-                plaintext_template_column = None
                 plaintext_template_text = self._read_template_text()
                 self._validate_template_text(plaintext_template_text, columns)
                 if use_html_template:
@@ -176,6 +176,7 @@ class Component(ComponentBase):
                 if not isinstance(reader, csv.DictReader):
                     recipient_email_address = row
                 else:
+                    #  email_data_table is used - validate templates
                     recipient_email_address = row[recipients_config.recipient_email_address_column]
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
@@ -183,7 +184,7 @@ class Component(ComponentBase):
 
                     try:
                         rendered_subject = Template(subject_template_text).render(row)
-                    except Exception:
+                    except NameError:
                         rendered_subject = subject_template_text
 
                     if plaintext_template_column is not None:
