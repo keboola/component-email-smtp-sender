@@ -106,7 +106,7 @@ class Component(ComponentBase):
         creds_config = connection_config.creds_config
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
-            sender_email_address=creds_config.sender_email_address,
+            sender_email_address=creds_config.sender_email_address or oauth_config.sender_email_address,
             password=creds_config.pswd_sender_password,
             server_host=creds_config.server_host,
             server_port=creds_config.server_port,
@@ -138,33 +138,33 @@ class Component(ComponentBase):
         custom_attachments_paths_by_filename = attachments_paths_by_filename
 
         if email_data_table_path is not None:
-            with open(email_data_table_path) as in_table:
-                reader = csv.DictReader(in_table)
-                columns = set(reader.fieldnames)
+            in_table = open(email_data_table_path)
+            reader = csv.DictReader(in_table)
+            columns = set(reader.fieldnames)
 
-                subject_column = None
-                if subject_config.subject_source == 'from_table':
-                    subject_column = subject_config.subject_column
-                else:
-                    subject_template_text = subject_config.subject_template_definition
-                    self._validate_template_text(subject_template_text, columns)
+            subject_column = None
+            if subject_config.subject_source == 'from_table':
+                subject_column = subject_config.subject_column
+            else:
+                subject_template_text = subject_config.subject_template_definition
+                self._validate_template_text(subject_template_text, columns)
 
-                html_template_column = None
-                if message_body_config.message_body_source == 'from_table':
-                    plaintext_template_column = message_body_config.plaintext_template_column
-                    if use_html_template:
-                        html_template_column = message_body_config.html_template_column
-                else:
-                    plaintext_template_column = None
-                    plaintext_template_text = self._read_template_text()
-                    self._validate_template_text(plaintext_template_text, columns)
-                    if use_html_template:
-                        html_template_text = self._read_template_text(plaintext=False)
-                        self._validate_template_text(html_template_text, columns)
+            html_template_column = None
+            if message_body_config.message_body_source == 'from_table':
+                plaintext_template_column = message_body_config.plaintext_template_column
+                if use_html_template:
+                    html_template_column = message_body_config.html_template_column
+            else:
+                plaintext_template_column = None
+                plaintext_template_text = self._read_template_text()
+                self._validate_template_text(plaintext_template_text, columns)
+                if use_html_template:
+                    html_template_text = self._read_template_text(plaintext=False)
+                    self._validate_template_text(html_template_text, columns)
 
-                all_attachments = attachments_config.attachments_source == 'all_input_files'
-                if not all_attachments:
-                    attachments_column = attachments_config.attachments_column
+            all_attachments = attachments_config.attachments_source == 'all_input_files'
+            if not all_attachments:
+                attachments_column = attachments_config.attachments_column
         else:
             reader = iter(self.cfg.basic_options.recipient_email_addresses.split(','))
             if advanced_options.recipients_config.recipients_source == 'from_definition':
@@ -176,7 +176,7 @@ class Component(ComponentBase):
                     recipient_email_address = row
                 else:
                     if advanced_options.recipients_config.recipients_source == 'from_table':
-                        recipient_email_address = row[self.cfg.advanced_options.recipient_email_address_column]
+                        recipient_email_address = row[self.cfg.advanced_options.recipients_config.recipient_email_address_column]
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
@@ -221,7 +221,7 @@ class Component(ComponentBase):
                         logging.info(
                             f"Sending email with subject: `{email_['Subject']}`"
                             f" from `{email_['From']}` to `{email_['To']}`")
-                        self._client.send_email(email_, message=rendered_plaintext_message,
+                        self._client.send_email(email_, message_body=rendered_plaintext_message,
                                                 attachments_paths=attachments_paths_by_filename.values())
                     except Exception as e:
                         error_message = str(e)
@@ -252,6 +252,11 @@ class Component(ComponentBase):
                     'recipient_email_address': recipient_email_address,
                     'error_message': str(e)})
                 self._results_writer.errors = True
+
+        try:
+            in_table.close()
+        except NameError:
+            pass
 
     def _extract_template_files_full_paths(
             self, in_files_by_name: Dict[str, List[FileDefinition]]) -> Tuple[Union[str, None], Union[str, None]]:
