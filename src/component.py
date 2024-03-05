@@ -127,6 +127,7 @@ class Component(ComponentBase):
         use_advanced_options = self.cfg.configuration_type == 'advanced'
         basic_options = self.cfg.basic_options
         advanced_options = self.cfg.advanced_options
+        recipients_config = advanced_options.recipients_config
         subject_config = advanced_options.subject_config
         message_body_config = advanced_options.message_body_config
         attachments_config = advanced_options.attachments_config
@@ -166,17 +167,16 @@ class Component(ComponentBase):
             if not all_attachments:
                 attachments_column = attachments_config.attachments_column
         else:
-            reader = iter(self.cfg.basic_options.recipient_email_addresses.split(','))
-            if advanced_options.recipients_config.recipients_source == 'from_definition':
-                reader = iter(advanced_options.recipients_config.recipient_email_addresses)
+            reader = iter(basic_options.recipient_email_addresses.split(','))
+            if recipients_config.recipients_source == 'from_definition':
+                reader = iter(recipients_config.recipient_email_addresses.split(','))
 
         for row in reader:
             try:
-                if not use_advanced_options:
+                if not isinstance(reader, csv.DictReader):
                     recipient_email_address = row
                 else:
-                    if advanced_options.recipients_config.recipients_source == 'from_table':
-                        recipient_email_address = row[self.cfg.advanced_options.recipients_config.recipient_email_address_column]
+                    recipient_email_address = row[recipients_config.recipient_email_address_column]
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
