@@ -224,7 +224,7 @@ class Component(ComponentBase):
                             f" from `{email_['From']}` to `{email_['To']}`")
                         self._client.send_email(email_, message_body=rendered_plaintext_message,
                                                 html_message_body=rendered_html_message,
-                                                attachments_paths=attachments_paths_by_filename.values())
+                                                attachments_paths=custom_attachments_paths_by_filename.values())
                     except Exception as e:
                         error_message = str(e)
                         status = 'ERROR'
