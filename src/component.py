@@ -243,17 +243,18 @@ class Component(ComponentBase):
                     html_message_body=rendered_html_message_writable,
                     attachment_filenames=json.dumps(list(custom_attachments_paths_by_filename)),
                     error_message=error_message))
+                if error_message and not continue_on_error:
+                    break
                 time.sleep(SLEEP_INTERVAL)
             except Exception as e:
-                if not continue_on_error:
-                    raise UserException(
-                        'Error occurred, when trying to send an email. Please validate your configuration.')
                 self._results_writer.writerow({
                     **general_error_row,
                     'sender_email_address': self._client.sender_email_address,
                     'recipient_email_address': recipient_email_address,
                     'error_message': str(e)})
                 self._results_writer.errors = True
+                if not continue_on_error:
+                    break
 
         try:
             in_table.close()
