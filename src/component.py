@@ -416,7 +416,8 @@ class Component(ComponentBase):
         return self.load_input_table_columns_()
 
     def validate_subject_(self) -> ValidationResult:
-        subject_config = SubjectConfig.load_from_dict(self.configuration.parameters.advanced_options['subject_config'])
+        self._init_configuration()
+        subject_config = self.cfg.advanced_options.subject_config
         message = VALID_SUBJECT_MESSAGE
         subject_column = None
         if subject_config.subject_source == 'from_table':
