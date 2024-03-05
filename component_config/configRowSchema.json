@@ -64,7 +64,7 @@
         "email_data_table_name": {
           "title": "Email Data Table Name",
           "type": "string",
-          "description": "name of the table with recipient email addresses, placeholders, other columns depending on your config",
+          "description": "name of the table with recipient email addresses, placeholders, other columns depending on your configuration",
           "propertyOrder": 1,
           "options": {
             "dependencies": {"recipients_source": "from_table"}
