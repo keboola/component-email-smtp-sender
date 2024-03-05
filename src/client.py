@@ -125,5 +125,5 @@ class SMTPClient:
         email_.subject = email['Subject']
         email_.body = message_body
         for attachment in attachments_paths:
-            email_.atachments.add(attachment)
+            email_.attachments.add(attachment)
         email_.send()
