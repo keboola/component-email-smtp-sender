@@ -12,7 +12,7 @@ import smtplib
 import socket
 import socks
 from keboola.component import UserException
-from O365 import Account
+from O365 import Account, EnvTokenBackend
 import msal
 
 
@@ -113,8 +113,8 @@ class SMTPClient:
 
         access_token_result = get_access_token()
         os.environ['O365TOKEN'] = json.dumps(access_token_result)
-        account = Account(credentials=(self.client_id, self.client_secret),
-                          auth_flow_type='credentials', tenant_id=self.tenant_id)
+        account = Account(credentials=(self.client_id, self.client_secret), auth_flow_type='credentials',
+                          tenant_id=self.tenant_id, token_backend=EnvTokenBackend())
         account.authenticate()
         self.smtp_server = account
 
