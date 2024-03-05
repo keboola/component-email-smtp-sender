@@ -12,7 +12,7 @@ from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
 from jinja2 import Template
 
-from configuration import Configuration, ConnectionConfig, SubjectConfig, AdvancedEmailOptions
+from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
 
 
