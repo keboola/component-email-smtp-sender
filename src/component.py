@@ -419,15 +419,6 @@ class Component(ComponentBase):
     def test_smtp_server_connection(self) -> ValidationResult:
         return self.test_smtp_server_connection_()
 
-    # def load_input_table_columns_(self) -> List[SelectElement]:
-    #     # TODO: consider reusing this method for other sync actions needing to read the input table for its columns
-    #     advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
-    #     table_name = advanced_options.email_data_table_name
-    #     table_path = self._download_table_from_storage_api(table_name)
-    #     with open(table_path) as in_table:
-    #         reader = csv.DictReader(in_table)
-    #         return [SelectElement(column) for column in reader.fieldnames]
-
     def load_input_table_columns_(self) -> List[SelectElement]:
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
