@@ -164,10 +164,6 @@ class Component(ComponentBase):
 
         if not use_advanced_options:
             recipients_reader = iter(basic_options.recipient_email_addresses.split(','))
-            rendered_subject = basic_options.subject
-            rendered_plaintext_message = basic_options.message_body
-            rendered_html_message = None
-            custom_attachments_paths_by_filename = attachments_paths_by_filename
         elif recipients_config.recipients_source == "from_definition":
             recipients_reader = iter(recipients_config.recipient_email_addresses.split(','))
         else:
@@ -186,28 +182,32 @@ class Component(ComponentBase):
                 else:
                     recipient_email_address = recipient_row[recipients_config.recipient_email_address_column]
 
-                if subject_column is not None:
-                    subject_template_text = row[subject_column]
-                    self._validate_template_text(subject_template_text, columns)
+                if not use_advanced_options:
+                    rendered_subject = basic_options.subject
+                    rendered_plaintext_message = basic_options.message_body
+                    rendered_html_message = None
+                else:
+                    if subject_column is not None:
+                        subject_template_text = row[subject_column]
+                        self._validate_template_text(subject_template_text, columns)
 
-                try:
-                    rendered_subject = Template(subject_template_text).render(row)
-                except NameError:
-                    rendered_subject = subject_template_text
+                    try:
+                        rendered_subject = Template(subject_template_text).render(row)
+                    except NameError:
+                        rendered_subject = subject_template_text
 
-                if plaintext_template_column is not None:
-                    plaintext_template_text = row[plaintext_template_column]
-                    self._validate_template_text(plaintext_template_text, columns)
+                    if plaintext_template_column is not None:
+                        plaintext_template_text = row[plaintext_template_column]
+                        self._validate_template_text(plaintext_template_text, columns)
 
-                    if html_template_column is not None:
-                        html_template_text = row[html_template_column]
-                        self._validate_template_text(html_template_text, columns)
+                        if html_template_column is not None:
+                            html_template_text = row[html_template_column]
+                            self._validate_template_text(html_template_text, columns)
 
-                rendered_plaintext_message = Template(plaintext_template_text).render(row)
-
-                rendered_html_message = None
-                if use_html_template:
-                    rendered_html_message = Template(html_template_text).render(row)
+                    rendered_plaintext_message = Template(plaintext_template_text).render(row)
+                    rendered_html_message = None
+                    if use_html_template:
+                        rendered_html_message = Template(html_template_text).render(row)
 
                 custom_attachments_paths_by_filename = attachments_paths_by_filename
                 if not all_attachments:
