@@ -434,7 +434,7 @@ class Component(ComponentBase):
         table_id = next(table.source for table in self.configuration.tables_input_mapping
                         if table.destination == table_name)
         storage_url = f'https://{self.environment_variables.stack_id}' if self.environment_variables.stack_id \
-                else "https://connection.keboola.com"
+                      else "https://connection.keboola.com"
         tables = StorageTables(storage_url, self.environment_variables.token)
         preview = tables.preview(table_id)
         reader = csv.DictReader(StringIO(preview))
