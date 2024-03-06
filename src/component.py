@@ -4,7 +4,9 @@ from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
+import os
 from io import StringIO
+from pathlib import Path
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
@@ -75,10 +77,15 @@ class Component(ComponentBase):
             for in_table in in_tables
             if in_table.name != email_data_table_name
         }
-        file_attachments_paths_by_filename = {
-            name: files[0].full_path
-            for name, files in in_files_by_name.items()
-            if files[0].full_path not in [self.plaintext_template_path, self.html_template_path]}
+        file_attachments_paths_by_filename = {}
+        for name, files in in_files_by_name.items():
+            file = files[0]
+            original_path = file.full_path
+            if original_path not in [self.plaintext_template_path, self.html_template_path]:
+                directory = os.path.split(original_path)[0]
+                new_path = os.path.join(directory, file.name)
+                Path.rename(original_path, new_path)
+                file_attachments_paths_by_filename[file.name] = new_path
 
         attachments_paths_by_filename = {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
         if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
