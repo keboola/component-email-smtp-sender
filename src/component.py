@@ -4,12 +4,14 @@ from typing import List, Tuple, Union, Dict, Set
 import re
 import time
 import json
+from io import StringIO
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import ValidationResult, MessageType, SelectElement
 from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
+from kbcstorage.tables import Tables as StorageTables
 from jinja2 import Template
 
 from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
@@ -417,14 +419,26 @@ class Component(ComponentBase):
     def test_smtp_server_connection(self) -> ValidationResult:
         return self.test_smtp_server_connection_()
 
+    # def load_input_table_columns_(self) -> List[SelectElement]:
+    #     # TODO: consider reusing this method for other sync actions needing to read the input table for its columns
+    #     advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
+    #     table_name = advanced_options.email_data_table_name
+    #     table_path = self._download_table_from_storage_api(table_name)
+    #     with open(table_path) as in_table:
+    #         reader = csv.DictReader(in_table)
+    #         return [SelectElement(column) for column in reader.fieldnames]
+
     def load_input_table_columns_(self) -> List[SelectElement]:
-        # TODO: consider reusing this method for other sync actions needing to read the input table for its columns
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
-        table_path = self._download_table_from_storage_api(table_name)
-        with open(table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            return [SelectElement(column) for column in reader.fieldnames]
+        table_id = next(table.source for table in self.configuration.tables_input_mapping
+                        if table.destination == table_name)
+        storage_url = f'https://{self.environment_variables.stack_id}' if self.environment_variables.stack_id \
+                else "https://connection.keboola.com"
+        tables = StorageTables(storage_url, self.environment_variables.token)
+        preview = tables.preview(table_id)
+        reader = csv.DictReader(StringIO(preview))
+        return [SelectElement(column) for column in reader.fieldnames]
 
     @sync_action('load_input_table_columns')
     def load_input_table_columns(self) -> List[SelectElement]:
