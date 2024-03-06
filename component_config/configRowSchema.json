@@ -81,47 +81,22 @@
             }
           }
         },
-        "recipients_config": {
-          "title": "Recipients Config",
+        "recipient_email_address_column": {
+          "type": "string",
+          "title": "Recipient Email Address Column",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
           "propertyOrder": 2,
-          "properties": {
-            "recipients_source": {
-              "title": "Recipients Source",
-              "type": "string",
-              "propertyOrder": 1,
-              "enum": ["from_table", "from_definition"],
-              "options": {
-                "enum_titles": ["From Table", "From Definition"],
-                "tooltip": "**From Table** - specify column which contains recipient email addresses \n\n**From Definition** - enter comma delimited list of recipient email addresses"
-              }
-            },
-            "recipient_email_address_column": {
-              "type": "string",
-              "title": "Recipient Email Address Column",
-              "items": {
-                "enum": [],
-                "type": "string"
-              },
-              "enum": [],
-              "format": "select",
-              "uniqueItems": true,
-              "propertyOrder": 2,
-              "options": {
-                "async": {
-                  "label": "Re-load columns",
-                  "action": "load_input_table_columns",
-                  "autoload": ["parameters.advanced_options.email_data_table_name"]
-                },
-                "dependencies": {"recipients_source": "from_table"}
-              }
-            },
-            "recipient_email_addresses": {
-              "title": "Recipient Email Addresses",
-              "type": "string",
-              "propertyOrder": 3,
-              "options": {
-                "dependencies": {"recipients_source": "from_definition"}
-              }
+          "options": {
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
             }
           }
         },
