@@ -365,7 +365,9 @@ class Component(ComponentBase):
 
     def _init_storage_client(self) -> StorageClient:
         storage_token = self.environment_variables.token
-        storage_client = StorageClient(self.environment_variables.url, storage_token)
+        url = self.environment_variables.url
+        url = 'https://connection.keboola.com/'
+        storage_client = StorageClient(url, storage_token)
         return storage_client
 
     def _download_table_from_storage_api(self, table_name) -> str:
@@ -389,7 +391,7 @@ class Component(ComponentBase):
                 input_files = storage_client.files.list(tags=tags)
                 all_input_files.extend(input_files)
                 return all_input_files
-        except AttributeError:
+        except KeyError:
             return []
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
