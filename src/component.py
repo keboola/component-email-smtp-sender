@@ -429,14 +429,20 @@ class Component(ComponentBase):
     def load_input_table_columns_(self) -> List[SelectElement]:
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
-        table_id = next(table.source for table in self.configuration.tables_input_mapping
-                        if table.destination == table_name)
-        storage_url = f'https://{self.environment_variables.stack_id}' if self.environment_variables.stack_id \
-                      else "https://connection.keboola.com"
-        tables = StorageTables(storage_url, self.environment_variables.token)
-        preview = tables.preview(table_id)
-        reader = csv.DictReader(StringIO(preview))
-        return [SelectElement(column) for column in reader.fieldnames]
+        if table_name is None:
+            message = "You must specify `Email Data Table Name` before loading columns"
+            return ValidationResult(message, MessageType.DANGER)
+        try:
+            table_id = next(table.source for table in self.configuration.tables_input_mapping
+                            if table.destination == table_name)
+            storage_url = f'https://{self.environment_variables.stack_id}' if self.environment_variables.stack_id \
+                          else "https://connection.keboola.com"
+            tables = StorageTables(storage_url, self.environment_variables.token)
+            preview = tables.preview(table_id)
+            reader = csv.DictReader(StringIO(preview))
+            return [SelectElement(column) for column in reader.fieldnames]
+        except Exception:
+            return ValidationResult("Couldn't fetch columns", MessageType.DANGER)
 
     @sync_action('load_input_table_columns')
     def load_input_table_columns(self) -> List[SelectElement]:
