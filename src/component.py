@@ -383,11 +383,14 @@ class Component(ComponentBase):
     def _list_files_in_sync_actions(self) -> List[Dict]:
         storage_client = self._init_storage_client()
         all_input_files = []
-        for file_input in self.configuration.config_data['storage']['input']['files']:
-            tags = [tag['name'] for tag in file_input['source']['tags']]
-            input_files = storage_client.files.list(tags=tags)
-            all_input_files.extend(input_files)
-        return all_input_files
+        try:
+            for file_input in self.configuration.config_data['storage']['input']['files']:
+                tags = [tag['name'] for tag in file_input['source']['tags']]
+                input_files = storage_client.files.list(tags=tags)
+                all_input_files.extend(input_files)
+                return all_input_files
+        except AttributeError:
+            return []
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         self._init_configuration()
@@ -501,11 +504,8 @@ class Component(ComponentBase):
             table_name = self.cfg.advanced_options.email_data_table_name
             in_table_path = self._download_table_from_storage_api(table_name)
             expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
-            try:
-                input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
-                missing_attachments = expected_input_filenames - set(input_filenames)
-            except AttributeError:
-                missing_attachments = expected_input_filenames
+            input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
+            missing_attachments = expected_input_filenames - set(input_filenames)
             if missing_attachments:
                 message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
