@@ -266,6 +266,10 @@ class Component(ComponentBase):
 
         try:
             in_table.close()
+        except NameError:
+            pass
+
+        try:
             in_table_recipients.close()
         except NameError:
             pass
