@@ -141,21 +141,9 @@ class AttachmentsConfig(ConfigurationBase):
 
 
 @dataclass
-class RecipientsConfig(ConfigurationBase):
-    """
-    attachments_source:
-    "from_definition" -> "recipient_email_addresses"
-    "from_table" -> "recipient_email_address_column"
-    """
-    recipients_source: Union[str, None] = None
-    recipient_email_address_column: Union[str, None] = None
-    recipient_email_addresses: Union[str, None] = None
-
-
-@dataclass
 class AdvancedEmailOptions(ConfigurationBase):
     email_data_table_name: Union[str, None] = None
-    recipients_config: RecipientsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    recipient_email_address_column: Union[str, None] = None
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
