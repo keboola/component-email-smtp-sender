@@ -505,7 +505,8 @@ class Component(ComponentBase):
             in_table_path = self._download_table_from_storage_api(table_name)
             expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
             input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
-            missing_attachments = expected_input_filenames - set(input_filenames)
+            input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
+            missing_attachments = expected_input_filenames - input_filenames - input_tables
             if missing_attachments:
                 message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
