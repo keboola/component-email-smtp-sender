@@ -143,6 +143,8 @@ class Component(ComponentBase):
         subject_column = None
         plaintext_template_column = None
         html_template_column = None
+        all_attachments = attachments_config.attachments_source == 'all_input_files'
+        attachments_column = attachments_config.attachments_column
 
         if email_data_table_path is not None:
             in_table = open(email_data_table_path)
@@ -165,10 +167,6 @@ class Component(ComponentBase):
                 if use_html_template:
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
-
-            all_attachments = attachments_config.attachments_source == 'all_input_files'
-            if not all_attachments:
-                attachments_column = attachments_config.attachments_column
 
         if use_advanced_options:
             in_table_recipients = open(email_data_table_path)
