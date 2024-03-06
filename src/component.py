@@ -172,11 +172,6 @@ class Component(ComponentBase):
 
         for recipient_row in recipients_reader:
             try:
-                row = next(reader)
-            except NameError:
-                pass
-
-            try:
                 if not isinstance(recipients_reader, csv.DictReader):
                     recipient_email_address = recipient_row
                 else:
@@ -186,7 +181,13 @@ class Component(ComponentBase):
                     rendered_subject = basic_options.subject
                     rendered_plaintext_message = basic_options.message_body
                     rendered_html_message = None
+                    custom_attachments_paths_by_filename = attachments_paths_by_filename
                 else:
+                    try:
+                        row = next(reader)
+                    except NameError:
+                        pass
+
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
@@ -209,12 +210,12 @@ class Component(ComponentBase):
                     if use_html_template:
                         rendered_html_message = Template(html_template_text).render(row)
 
-                custom_attachments_paths_by_filename = attachments_paths_by_filename
-                if not all_attachments:
-                    custom_attachments_paths_by_filename = {
-                        attachment_filename: attachments_paths_by_filename[attachment_filename]
-                        for attachment_filename in json.loads(row[attachments_column])
-                    }
+                    custom_attachments_paths_by_filename = attachments_paths_by_filename
+                    if not all_attachments:
+                        custom_attachments_paths_by_filename = {
+                            attachment_filename: attachments_paths_by_filename[attachment_filename]
+                            for attachment_filename in json.loads(row[attachments_column])
+                        }
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
