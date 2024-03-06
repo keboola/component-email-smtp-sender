@@ -498,11 +498,14 @@ class Component(ComponentBase):
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
         if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
-            input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
             table_name = self.cfg.advanced_options.email_data_table_name
             in_table_path = self._download_table_from_storage_api(table_name)
             expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
-            missing_attachments = expected_input_filenames - set(input_filenames)
+            try:
+                input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
+                missing_attachments = expected_input_filenames - set(input_filenames)
+            except AttributeError:
+                missing_attachments = expected_input_filenames
             if missing_attachments:
                 message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
