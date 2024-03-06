@@ -428,7 +428,8 @@ class Component(ComponentBase):
 
     @sync_action("load_input_table_selection")
     def load_input_table_selection(self) -> List[SelectElement]:
-        return [SelectElement(table.name) for table in self.get_input_tables_definitions()]
+        self._init_configuration()
+        return [SelectElement(table.destination) for table in self.configuration.tables_input_mapping]
 
     def load_input_table_columns_(self) -> List[SelectElement]:
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
