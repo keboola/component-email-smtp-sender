@@ -426,6 +426,10 @@ class Component(ComponentBase):
     def test_smtp_server_connection(self) -> ValidationResult:
         return self.test_smtp_server_connection_()
 
+    @sync_action("load_input_table_selection")
+    def load_input_table_selection(self) -> List[SelectElement]:
+        return [SelectElement(table.name) for table in self.get_input_tables_definitions()]
+
     def load_input_table_columns_(self) -> List[SelectElement]:
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
