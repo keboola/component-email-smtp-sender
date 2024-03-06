@@ -62,12 +62,23 @@
       "options": {"dependencies": {"configuration_type": "advanced"}},
       "properties": {
         "email_data_table_name": {
-          "title": "Email Data Table Name",
           "type": "string",
+          "title": "Email Data Table Name",
           "description": "name of the table with recipient email addresses, placeholders, other columns depending on your configuration",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
           "propertyOrder": 1,
           "options": {
-            "dependencies": {"recipients_source": "from_table"}
+            "async": {
+              "label": "Re-load tables",
+              "action": "load_input_table_selection",
+              "autoload": []
+            }
           }
         },
         "recipients_config": {
