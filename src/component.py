@@ -124,7 +124,7 @@ class Component(ComponentBase):
                     email_data_table_path: Union[str, None] = None) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
-        # use_advanced_options = self.cfg.configuration_type == 'advanced'
+        use_advanced_options = self.cfg.configuration_type == 'advanced'
         basic_options = self.cfg.basic_options
         advanced_options = self.cfg.advanced_options
         recipients_config = advanced_options.recipients_config
@@ -132,11 +132,6 @@ class Component(ComponentBase):
         message_body_config = advanced_options.message_body_config
         attachments_config = advanced_options.attachments_config
         use_html_template = message_body_config.use_html_template
-
-        rendered_subject = basic_options.subject
-        rendered_plaintext_message = basic_options.message_body
-        rendered_html_message = None
-        custom_attachments_paths_by_filename = attachments_paths_by_filename
         subject_column = None
         plaintext_template_column = None
         html_template_column = None
@@ -166,18 +161,31 @@ class Component(ComponentBase):
             all_attachments = attachments_config.attachments_source == 'all_input_files'
             if not all_attachments:
                 attachments_column = attachments_config.attachments_column
-        else:
-            reader = iter(basic_options.recipient_email_addresses.split(','))
-            if recipients_config.recipients_source == 'from_definition':
-                reader = iter(recipients_config.recipient_email_addresses.split(','))
 
-        for row in reader:
+        if not use_advanced_options:
+            recipients_reader = iter(basic_options.recipient_email_addresses.split(','))
+            rendered_subject = basic_options.subject
+            rendered_plaintext_message = basic_options.message_body
+            rendered_html_message = None
+            custom_attachments_paths_by_filename = attachments_paths_by_filename
+        elif recipients_config.recipients_source == "from_definition":
+            recipients_reader = iter(recipients_config.recipient_email_addresses.split(','))
+        else:
+            in_table_recipients = open(email_data_table_path)
+            recipients_reader = csv.DictReader(in_table_recipients)
+
+        for recipient_row in recipients_reader:
             try:
-                if not isinstance(reader, csv.DictReader):
-                    recipient_email_address = row
+                row = next(reader)
+            except NameError:
+                pass
+
+            try:
+                if not isinstance(recipients_reader, csv.DictReader):
+                    recipient_email_address = recipient_row
                 else:
-                    #  email_data_table is used - validate templates
-                    recipient_email_address = row[recipients_config.recipient_email_address_column]
+                    recipient_email_address = recipient_row[recipients_config.recipient_email_address_column]
+
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
@@ -258,6 +266,7 @@ class Component(ComponentBase):
 
         try:
             in_table.close()
+            in_table_recipients.close()
         except NameError:
             pass
 
