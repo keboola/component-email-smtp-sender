@@ -3,7 +3,15 @@
 
 ## Config fields
 
-**Connection Config**
+### Connection Config
+
+**o365 outlook via oauth**
+ - **Sender Email Address**
+ - **Client ID** - app needs to be registered in `Microsoft Entra ID` in Azure portal under `App registrations` (under API permissions you need to add application type permissins: `Mail.Send`, `Mail.ReadWrite` and `User.Read.All`)
+ - **Client Secret** - needs to be generated under `Certificates & secrets` tab
+ - **Tenant ID** - can be found in the overview tab of your app
+
+**SSL**
  - **Sender Email Address** - Sender Email Address
  - **Sender App Password** - certain SMTP server providers require you to generate an app password instead of the account one (typically when MFA is enabled)
  - **SMTP Server Host** - SMTP Server Host
@@ -16,6 +24,19 @@
    - **Proxy Server Username** - Proxy Server Username
    - **Proxy Server Password** - Proxy Server Password
 
+### Configuration types:
+
+### Basic
+- lets u send specific subject and message body with or without attachments to a list of recipients
+
+**Recipient Email Addresses** - comma delimited list of email addresses
+**Subject** - subject literal
+**Message Body** - message body literal
+**Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
+
+### Advanced
+
+**Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
 **Recipient Email Address Column** - Recipient email address column name
 
 **Subject Config**
@@ -36,13 +57,14 @@
 **Attachments Config**
 - **Attachments Source** - `From Table`, `All Input Files`
 - **Attachments Column** - Attachments column name - json list containing input filenames, so that each recipient can receive a specific subset of attachments (Attachments Source = `From Table`)
-- **Shared attachments** - if checked, all non-template files in the files input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
+- **Shared attachments** - if checked, all non-template files in the files input mapping and tables from table input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
 
 **Dry Run** - if checked - emails are built, but not sent
+**Continue On Error** - if not checked - first unsendable email will crash the component - results table will still be populated with sent emails detail
 
- - arbitrary number of attachment files - attachment can be of any file type (certain SMTP server providers forbid some types since they are considered potentially dangerous)
+ - arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid some types since they are considered potentially dangerous)
 ## Required Input Tables
- - `arbitrary_table_name`
+ - `arbitrary_table_name` - should be selected in `Email Data Table Name` field
 
  **columns:**
  - recipient_email_address
@@ -71,4 +93,4 @@
  - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided message body plaintext template are present in the input table
  - `VALIDATE HTML TEMPLATE` - validates, that all placeholders in the provided message body HTML template are present in the input table
  - `VALIDATE ATTACHMENTS` - validates, that all attachment files are present in the file input mapping
- - `VALIDATE CONFIG` - runs all tests and validations above
+ - `VALIDATE CONFIG` - runs all tests and validations above and provides detail
