@@ -167,19 +167,14 @@ class Component(ComponentBase):
                 if use_html_template:
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
-
-        if use_advanced_options:
-            in_table_recipients = open(email_data_table_path)
-            recipients_reader = csv.DictReader(in_table_recipients)
         else:
-            recipients_reader = iter(basic_options.recipient_email_addresses.split(','))
+            reader = iter(basic_options.recipient_email_addresses.split(','))
 
-        for recipient_row in recipients_reader:
+        for row in reader:
             try:
-                if not isinstance(recipients_reader, csv.DictReader):
-                    recipient_email_address = recipient_row
-                else:
-                    recipient_email_address = recipient_row[advanced_options.recipient_email_address_column]
+                recipient_email_address = row
+                if isinstance(reader, csv.DictReader):
+                    recipient_email_address = row[advanced_options.recipient_email_address_column]
 
                 if not use_advanced_options:
                     rendered_subject = basic_options.subject
@@ -187,18 +182,13 @@ class Component(ComponentBase):
                     rendered_html_message = None
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
                 else:
-                    try:
-                        row = next(reader)
-                    except NameError:
-                        pass
-
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
 
                     try:
                         rendered_subject = Template(subject_template_text).render(row)
-                    except NameError:
+                    except Exception:
                         rendered_subject = subject_template_text
 
                     if plaintext_template_column is not None:
@@ -271,11 +261,6 @@ class Component(ComponentBase):
 
         try:
             in_table.close()
-        except NameError:
-            pass
-
-        try:
-            in_table_recipients.close()
         except NameError:
             pass
 
