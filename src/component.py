@@ -64,32 +64,11 @@ class Component(ComponentBase):
         in_tables = self.get_input_tables_definitions()
         in_files_by_name = self.get_input_file_definitions_grouped_by_name()
         email_data_table_name = self.cfg.advanced_options.email_data_table_name
-        try:
-            email_data_table_path = next(in_table.full_path for in_table in in_tables
-                                         if in_table.name == email_data_table_name)
-        except StopIteration:
-            email_data_table_path = None
+        email_data_table_path = self.load_email_data_table_path(in_tables, email_data_table_name)
         self.plaintext_template_path, self.html_template_path = \
             self._extract_template_files_full_paths(in_files_by_name)
-
-        table_attachments_paths_by_filename = {
-            in_table.name: in_table.full_path
-            for in_table in in_tables
-            if in_table.name != email_data_table_name
-        }
-        file_attachments_paths_by_filename = {}
-        for name, files in in_files_by_name.items():
-            file = files[0]
-            original_path = file.full_path
-            if original_path not in [self.plaintext_template_path, self.html_template_path]:
-                directory = os.path.split(original_path)[0]
-                new_path = os.path.join(directory, file.name)
-                Path.rename(original_path, new_path)
-                file_attachments_paths_by_filename[file.name] = new_path
-
-        attachments_paths_by_filename = {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
-        if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
-            attachments_paths_by_filename = {}
+        attachments_paths_by_filename = \
+            self.load_attachment_paths_by_filename(in_tables, email_data_table_name, in_files_by_name)
 
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
@@ -128,6 +107,42 @@ class Component(ComponentBase):
             client_id=oauth_config.client_id,
             client_secret=oauth_config.pswd_client_secret)
         self._client.init_smtp_server()
+
+    @staticmethod
+    def load_email_data_table_path(in_tables, email_data_table_name):
+        try:
+            table_path = next(in_table.full_path for in_table in in_tables
+                              if in_table.name == email_data_table_name)
+        except StopIteration:
+            table_path = None
+        return table_path
+
+    @staticmethod
+    def _load_attachment_tables(in_tables, table_to_exclude):
+        tables = {
+            in_table.name: in_table.full_path
+            for in_table in in_tables
+            if in_table.name != table_to_exclude}
+        return tables
+
+    def _load_attachment_files(self, in_files_by_name):
+        files = {}
+        for name, files in in_files_by_name.items():
+            file = files[0]
+            original_path = file.full_path
+            if original_path not in [self.plaintext_template_path, self.html_template_path]:
+                directory = os.path.split(original_path)[0]
+                new_path = os.path.join(directory, file.name)
+                Path.rename(original_path, new_path)
+                files[file.name] = new_path
+        return files
+
+    def load_attachment_paths_by_filename(self, in_tables, email_data_table_name, in_files_by_name):
+        if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
+            return {}
+        table_attachments_paths_by_filename = self._load_attachment_tables(in_tables, email_data_table_name)
+        file_attachments_paths_by_filename = self._load_attachment_files(in_files_by_name)
+        return {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
 
     def send_emails(self, attachments_paths_by_filename: Dict[str, str],
                     email_data_table_path: Union[str, None] = None) -> None:
