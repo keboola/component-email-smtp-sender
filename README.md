@@ -27,7 +27,7 @@
 ### Configuration types:
 
 ### Basic
-- lets u send specific subject and message body with or without attachments to a list of recipients
+- lets you send specific subject and message body with or without attachments to a list of recipients
 
 **Recipient Email Addresses** - comma delimited list of email addresses
 **Subject** - subject literal
@@ -35,6 +35,9 @@
 **Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
 
 ### Advanced
+- as opposed to the basic configuration option you need to provide table with **Recipient Email Address Column** and potentially other columns corresponding to column names in `From Table` source options and columns containing values for placeholders in your subject and message body templates
+- lets you choose from multiple sourcing options for subject, message body and attachments
+- enables you to include html message body version with the plaintext version as a backup
 
 **Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
 **Recipient Email Address Column** - Recipient email address column name
@@ -58,7 +61,7 @@
 - **Attachments Source** - `From Table`, `All Input Files`
 - **Attachments Column** - Attachments column name - json list containing input filenames, so that each recipient can receive a specific subset of attachments (Attachments Source = `From Table`)
 - **Shared attachments** - if checked, all non-template files in the files input mapping and tables from table input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
-- arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid some types since they are considered potentially dangerous)
+- arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid certain file types since they are considered potentially dangerous)
 
 **Dry Run** - if checked - emails are built, but not sent
 **Continue On Error** - if not checked - first unsendable email will crash the component - results table will still be populated with sent emails detail
@@ -75,7 +78,7 @@
  - columns with names corresponding to placeholder names in your template(s)
 
 ## Output Table
- - `results`
+ - `results` - gives you detail on each attempted recipient
 
  **columns:**
  - `status` - `OK` or `ERROR`
@@ -88,7 +91,7 @@
  - `error_message` - error_message
 
 ## Sync Actions
- - `TEST SMTP SERVER CONNECTION` - tests, whether connection can be established
+ - `TEST SMTP SERVER CONNECTION` - tests, whether connection to the SMTP server can be established
  - `VALIDATE SUBJECT` - validates, that all placeholders in the provided subject template are present in the input table
  - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided message body plaintext template are present in the input table
  - `VALIDATE HTML TEMPLATE` - validates, that all placeholders in the provided message body HTML template are present in the input table
