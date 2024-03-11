@@ -386,7 +386,7 @@ class Component(ComponentBase):
                 tags = [tag['name'] for tag in file_input['source']['tags']]
                 input_files = storage_client.files.list(tags=tags)
                 all_input_files.extend(input_files)
-                return all_input_files
+            return all_input_files
         except KeyError:
             return []
 
@@ -452,32 +452,6 @@ class Component(ComponentBase):
         if isinstance(columns, ValidationResult):
             return columns
         return [SelectElement(column) for column in columns]
-
-    # def validate_subject_(self) -> ValidationResult:
-    #     self._init_configuration()
-    #     subject_config = self.cfg.advanced_options.subject_config
-    #     message = VALID_SUBJECT_MESSAGE
-    #     subject_column = None
-    #     if subject_config.subject_source == 'from_table':
-    #         subject_column = subject_config.subject_column
-    #
-    #     table_name = self.cfg.advanced_options.email_data_table_name
-    #     in_table_path = self._download_table_from_storage_api(table_name)
-    #     with open(in_table_path) as in_table:
-    #         reader = csv.DictReader(in_table)
-    #         columns = set(reader.fieldnames)
-    #         if subject_column is not None:
-    #             missing_columns = self._get_missing_columns_from_table(reader, subject_column)
-    #             if missing_columns:
-    #                 message = '❌ - Missing columns: ' + ', '.join(missing_columns)
-    #         else:
-    #             subject_template_text = subject_config.subject_template_definition
-    #             try:
-    #                 self._validate_template_text(subject_template_text, columns)
-    #             except Exception as e:
-    #                 message = str(e)
-    #     message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
-    #     return ValidationResult(message, message_type)
 
     def validate_subject_(self) -> ValidationResult:
         self._init_configuration()
