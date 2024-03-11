@@ -392,22 +392,21 @@ class Component(ComponentBase):
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         self._init_configuration()
-        table_name = self.cfg.advanced_options.email_data_table_name
-        in_table_path = self._download_table_from_storage_api(table_name)
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
-        with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            columns = set(reader.fieldnames)
-
-            if self.cfg.advanced_options.message_body_config.message_body_source == 'from_table':
+        if self.cfg.advanced_options.message_body_config.message_body_source == 'from_table':
+            table_name = self.cfg.advanced_options.email_data_table_name
+            in_table_path = self._download_table_from_storage_api(table_name)
+            with open(in_table_path) as in_table:
+                reader = csv.DictReader(in_table)
                 return self._validate_templates_from_table(reader, plaintext)
-
-        template_text = self._read_template_text(plaintext)
-        try:
-            self._validate_template_text(template_text, columns)
-            return ValidationResult(valid_message, MessageType.SUCCESS)
-        except UserException as e:
-            return ValidationResult(str(e), MessageType.DANGER)
+        else:
+            template_text = self._read_template_text(plaintext)
+            try:
+                columns = self.load_input_table_columns_()
+                self._validate_template_text(template_text, columns)
+                return ValidationResult(valid_message, MessageType.SUCCESS)
+            except UserException as e:
+                return ValidationResult(str(e), MessageType.DANGER)
 
     def __exit__(self):
         self._client.smtp_server.close()
@@ -429,7 +428,7 @@ class Component(ComponentBase):
         self._init_configuration()
         return [SelectElement(table.destination) for table in self.configuration.tables_input_mapping]
 
-    def load_input_table_columns_(self) -> List[SelectElement]:
+    def load_input_table_columns_(self) -> Union[List[str], ValidationResult]:
         advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters['advanced_options'])
         table_name = advanced_options.email_data_table_name
         if table_name is None:
@@ -443,37 +442,63 @@ class Component(ComponentBase):
             tables = StorageTables(storage_url, self.environment_variables.token)
             preview = tables.preview(table_id)
             reader = csv.DictReader(StringIO(preview))
-            return [SelectElement(column) for column in reader.fieldnames]
+            return reader.fieldnames
         except Exception:
             return ValidationResult("Couldn't fetch columns", MessageType.DANGER)
 
     @sync_action('load_input_table_columns')
     def load_input_table_columns(self) -> List[SelectElement]:
-        return self.load_input_table_columns_()
+        columns = self.load_input_table_columns_()
+        if isinstance(columns, ValidationResult):
+            return columns
+        return [SelectElement(column) for column in columns]
+
+    # def validate_subject_(self) -> ValidationResult:
+    #     self._init_configuration()
+    #     subject_config = self.cfg.advanced_options.subject_config
+    #     message = VALID_SUBJECT_MESSAGE
+    #     subject_column = None
+    #     if subject_config.subject_source == 'from_table':
+    #         subject_column = subject_config.subject_column
+    #
+    #     table_name = self.cfg.advanced_options.email_data_table_name
+    #     in_table_path = self._download_table_from_storage_api(table_name)
+    #     with open(in_table_path) as in_table:
+    #         reader = csv.DictReader(in_table)
+    #         columns = set(reader.fieldnames)
+    #         if subject_column is not None:
+    #             missing_columns = self._get_missing_columns_from_table(reader, subject_column)
+    #             if missing_columns:
+    #                 message = '❌ - Missing columns: ' + ', '.join(missing_columns)
+    #         else:
+    #             subject_template_text = subject_config.subject_template_definition
+    #             try:
+    #                 self._validate_template_text(subject_template_text, columns)
+    #             except Exception as e:
+    #                 message = str(e)
+    #     message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
+    #     return ValidationResult(message, message_type)
 
     def validate_subject_(self) -> ValidationResult:
         self._init_configuration()
         subject_config = self.cfg.advanced_options.subject_config
         message = VALID_SUBJECT_MESSAGE
-        subject_column = None
         if subject_config.subject_source == 'from_table':
             subject_column = subject_config.subject_column
-
-        table_name = self.cfg.advanced_options.email_data_table_name
-        in_table_path = self._download_table_from_storage_api(table_name)
-        with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            columns = set(reader.fieldnames)
-            if subject_column is not None:
+            table_name = self.cfg.advanced_options.email_data_table_name
+            in_table_path = self._download_table_from_storage_api(table_name)
+            with open(in_table_path) as in_table:
+                reader = csv.DictReader(in_table)
                 missing_columns = self._get_missing_columns_from_table(reader, subject_column)
                 if missing_columns:
                     message = '❌ - Missing columns: ' + ', '.join(missing_columns)
-            else:
-                subject_template_text = subject_config.subject_template_definition
-                try:
-                    self._validate_template_text(subject_template_text, columns)
-                except Exception as e:
-                    message = str(e)
+        else:
+            subject_template_text = subject_config.subject_template_definition
+            columns = self.load_input_table_columns_()
+            try:
+                self._validate_template_text(subject_template_text, columns)
+            except Exception as e:
+                message = str(e)
         message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
