@@ -126,7 +126,7 @@ class Component(ComponentBase):
         return tables
 
     def _load_attachment_files(self, in_files_by_name):
-        files = {}
+        attachment_files = {}
         for name, files in in_files_by_name.items():
             file = files[0]
             original_path = file.full_path
@@ -134,8 +134,8 @@ class Component(ComponentBase):
                 directory = os.path.split(original_path)[0]
                 new_path = os.path.join(directory, file.name)
                 Path.rename(original_path, new_path)
-                files[file.name] = new_path
-        return files
+                attachment_files[file.name] = new_path
+        return attachment_files
 
     def load_attachment_paths_by_filename(self, in_tables, email_data_table_name, in_files_by_name):
         if self.cfg.configuration_type == 'basic' and not self.cfg.basic_options.include_attachments:
