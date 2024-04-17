@@ -1,2 +1,1 @@
-# SMTP Sender Application
- - Component enabling users to send emails with custom subject, message body and attachments from keboola platfrom
+SMTP (Simple Mail Transfer Protocol) is the backbone of email communication, facilitating the transfer of messages between email servers. It ensures reliable delivery of emails across networks, powering global communication seamlessly. 
