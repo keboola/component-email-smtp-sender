@@ -158,13 +158,13 @@
             }
           }
         },
-        "test_smtp_server_connection": {
+        "test_connection": {
           "type": "button",
           "format": "sync-action",
           "propertyOrder": 9,
           "options": {
             "async": {
-              "label": "TEST SMTP SERVER CONNECTION",
+              "label": "TEST CONNECTION",
               "action": "testConnection"
             }
           }

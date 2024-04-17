@@ -420,7 +420,7 @@ class Component(ComponentBase):
             return ValidationResult("❌ - Connection couldn't be established", MessageType.DANGER)
 
     @sync_action('testConnection')
-    def test_smtp_server_connection(self):
+    def test_connection(self):
         try:
             self.test_smtp_server_connection_()
         except Exception:
