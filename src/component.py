@@ -10,7 +10,7 @@ from pathlib import Path
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
-from keboola.component.sync_actions import ValidationResult, MessageType, SelectElement
+from keboola.component.sync_actions import ValidationResult, MessageType, SelectElement, SyncActionResult
 from keboola.component.dao import FileDefinition
 from kbcstorage.client import Client as StorageClient
 from kbcstorage.tables import Tables as StorageTables
@@ -423,6 +423,7 @@ class Component(ComponentBase):
     def test_smtp_server_connection(self):
         try:
             self.test_smtp_server_connection_()
+            return SyncActionResult()
         except Exception:
             raise UserException("Test connection failed.")
 
