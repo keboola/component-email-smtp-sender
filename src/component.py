@@ -420,8 +420,11 @@ class Component(ComponentBase):
             return ValidationResult("❌ - Connection couldn't be established", MessageType.DANGER)
 
     @sync_action('testConnection')
-    def test_smtp_server_connection(self) -> ValidationResult:
-        return self.test_smtp_server_connection_()
+    def test_smtp_server_connection(self):
+        try:
+            self.test_smtp_server_connection_()
+        except Exception:
+            raise UserException("Test connection failed.")
 
     @sync_action("load_input_table_selection")
     def load_input_table_selection(self) -> List[SelectElement]:
