@@ -165,7 +165,8 @@
           "options": {
             "async": {
               "label": "TEST SMTP SERVER CONNECTION",
-              "action": "testConnection"
+              "action": "testConnection",
+              "cache": false
             }
           }
         }
