@@ -1,4 +1,5 @@
 # SMTP Sender Application
+
 - Component enabling users to send emails with custom subject, message body and attachments from keboola platform
 
 ## Config fields
@@ -6,12 +7,14 @@
 ### Connection Config
 
 **o365 outlook via oauth**
+
  - **Sender Email Address**
  - **Client ID** - app needs to be registered in `Microsoft Entra ID` in Azure portal under `App registrations` (under API permissions you need to add application type permissins: `Mail.Send`, `Mail.ReadWrite` and `User.Read.All`)
  - **Client Secret** - needs to be generated under `Certificates & secrets` tab
  - **Tenant ID** - can be found in the overview tab of your app
 
 **SSL**
+
  - **Sender Email Address** - Sender Email Address
  - **Sender App Password** - certain SMTP server providers require you to generate an app password instead of the account one (typically when MFA is enabled)
  - **SMTP Server Host** - SMTP Server Host
@@ -27,27 +30,29 @@
 ### Configuration types:
 
 ### Basic
-- lets you send specific subject and message body with or without attachments to a list of recipients
 
-**Recipient Email Addresses** - comma delimited list of email addresses
-**Subject** - subject literal
-**Message Body** - message body literal
-**Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
+It allows user to send specific subject and message body with or without attachments to a list of recipients
+
+- **Recipient Email Addresses** - comma delimited list of email addresses
+- **Subject** - subject literal
+- **Message Body** - message body literal
+- **Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
 
 ### Advanced
-- as opposed to the basic configuration option you need to provide table with **Recipient Email Address Column** and potentially other columns corresponding to column names in `From Table` source options and columns containing values for placeholders in your subject and message body templates
-- lets you choose from multiple sourcing options for subject, message body and attachments
-- enables you to include html message body version with the plaintext version as a backup
 
-**Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
-**Recipient Email Address Column** - Recipient email address column name
+As opposed to the basic configuration option you need to provide table with **Recipient Email Address Column** and potentially other columns corresponding to column names in `From Table` source options and columns containing values for placeholders in your subject and message body templates
+It lets you choose from multiple sourcing options for subject, message body and attachments. It enables user to include html message body version with the plaintext version as a backup
 
-**Subject Config**
-- **Subject Source** - `From Table`, `From Template Definition`
-- **Subject Column** - Subject column name (Subject Source = `From Table`)
-- **Plaintext Subject Template** - Jinja2 formatted subject (Subject Source = `From Template Definition`)
+- **Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
+- **Recipient Email Address Column** - Recipient email address column name
+
+- **Subject Config**
+ - **Subject Source** - `From Table`, `From Template Definition`
+ - **Subject Column** - Subject column name (Subject Source = `From Table`)
+ - **Plaintext Subject Template** - Jinja2 formatted subject (Subject Source = `From Template Definition`)
 
 **Message Body Config**
+
 - **Message Body Source** - `From Table`,`From Template File`, `From Template Definition`
 - **Use HTML Alternative** - Checkbox indicating, whether you want to provide HTML version of message body
 - **Plaintext Message Body Column** - Plaintext message body column name (Message Body Source = `From Table`)
@@ -58,18 +63,21 @@
 - **HTML Message Body Template** - Jinja2 formatted html message body (Message Body Source = `From Template Definition`)
 
 **Attachments Config**
+
 - **Attachments Source** - `From Table`, `All Input Files`
 - **Attachments Column** - Attachments column name - json list containing input filenames, so that each recipient can receive a specific subset of attachments (Attachments Source = `From Table`)
 - **Shared attachments** - if checked, all non-template files in the files input mapping and tables from table input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
-- arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid certain file types since they are considered potentially dangerous)
+ - arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid certain file types since they are considered potentially dangerous)
 
 **Dry Run** - if checked - emails are built, but not sent
 **Continue On Error** - if not checked - first unsendable email will crash the component - results table will still be populated with sent emails detail
 
 ## Required Input Tables
+
  - `arbitrary_table_name` - should be selected in `Email Data Table Name` field
 
  **columns:**
+ 
  - recipient_email_address
  - subject_column (depends on config)
  - plaintext_template_column (depends on config)
@@ -78,9 +86,11 @@
  - columns with names corresponding to placeholder names in your template(s)
 
 ## Output Table
+
  - `results` - gives you detail on each attempted recipient
 
  **columns:**
+ 
  - `status` - `OK` or `ERROR`
  - `recipient_email_address` - recipient_email_address
  - `sender_email_address` - sender_email_address
@@ -91,6 +101,7 @@
  - `error_message` - error_message
 
 ## Sync Actions
+
  - `TEST SMTP SERVER CONNECTION` - tests, whether connection to the SMTP server can be established
  - `VALIDATE SUBJECT` - validates, that all placeholders in the provided subject template are present in the input table
  - `VALIDATE PLAINTEXT TEMPLATE` - validates, that all placeholders in the provided message body plaintext template are present in the input table
