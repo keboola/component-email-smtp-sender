@@ -1,1 +1,1 @@
-SMTP (Simple Mail Transfer Protocol) is the backbone of email communication, facilitating the transfer of messages between email servers. It ensures reliable delivery of emails across networks, powering global communication seamlessly. 
+SMTP (Simple Mail Transfer Protocol) is the backbone of email communication, enabling the transfer of messages between servers and ensuring reliable email delivery across networks.
