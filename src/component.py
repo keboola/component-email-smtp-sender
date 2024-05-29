@@ -416,8 +416,8 @@ class Component(ComponentBase):
         try:
             self.init_client(connection_config=connection_config)
             return ValidationResult('✅ - Connection established successfully', MessageType.SUCCESS)
-        except Exception:
-            return ValidationResult("❌ - Connection couldn't be established", MessageType.DANGER)
+        except Exception as e:
+            return ValidationResult(f"❌ - Connection couldn't be established. Error: {e}", MessageType.DANGER)
 
     @sync_action('testConnection')
     def test_smtp_server_connection(self) -> ValidationResult:
