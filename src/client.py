@@ -91,7 +91,7 @@ class SMTPClient:
         self.smtp_server = server
 
     def _send_email_via_tls_server(self, email: MIMEMultipart, **kwargs) -> None:
-        self.smtp_server.sendmail(self.sender_email_address, email['To'], email)
+        self.smtp_server.send_message(email)
 
     def _init_ssl_smtp_server(self) -> None:
         server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port)
