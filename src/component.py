@@ -351,6 +351,9 @@ class Component(ComponentBase):
             key_template_filename = KEY_PLAINTEXT_TEMPLATE_FILENAME if plaintext else KEY_HTML_TEMPLATE_FILENAME
             template_filename = message_body_config[key_template_filename]
             files = self._list_files_in_sync_actions()
+            if not files:
+                raise UserException('No files found in the storage. Please use tags to select your files instead of '
+                                    'query.')
             template_file_id = next(file['id'] for file in files if file['name'] == template_filename)
             template_path = self._download_file_from_storage_api(template_file_id)
             template_text = self._read_template_file(template_path)
