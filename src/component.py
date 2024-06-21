@@ -59,8 +59,6 @@ class Component(ComponentBase):
         self.html_template_path = None
 
     def run(self):
-        self.validate_plaintext_template()
-        exit()
         self._init_configuration()
         self.init_client()
         in_tables = self.get_input_tables_definitions()
