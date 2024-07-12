@@ -71,6 +71,7 @@
             },
             "#sender_password": {
               "type": "string",
+              "format":"password",
               "title": "Sender App Password",
               "propertyOrder": 2,
               "options": {
