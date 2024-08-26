@@ -1,6 +1,7 @@
 import logging
 from typing import Union, Dict, List
 import os
+import re
 import json
 
 from email.mime.multipart import MIMEMultipart
@@ -24,7 +25,8 @@ class SMTPClient:
                  proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
                  connection_protocol: str = 'SSL', use_oauth: bool = False, tenant_id: Union[str, None] = None,
-                 client_id: Union[str, None] = None, client_secret: Union[str, None] = None):
+                 client_id: Union[str, None] = None, client_secret: Union[str, None] = None,
+                 address_whitelist: List[str] = None, disable_attachments: bool = False) -> None:
 
         self.sender_email_address = sender_email_address
         self.password = password
@@ -33,6 +35,10 @@ class SMTPClient:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
+
+        # Customizations
+        self.address_whitelist = address_whitelist
+        self.disable_attachments = disable_attachments
 
         if proxy_server_host:
             socks.setdefaultproxy(proxy_type=socks.PROXY_TYPE_SOCKS5, addr=proxy_server_host, port=proxy_server_port,
@@ -61,6 +67,9 @@ class SMTPClient:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist)
         """
+        if self.address_whitelist:
+            self.check_email_mask(recipient_email_address)
+
         email_ = MIMEMultipart('mixed')
         email_['From'] = self.sender_email_address
         email_['To'] = recipient_email_address
@@ -73,7 +82,7 @@ class SMTPClient:
 
         email_.attach(email_message)
 
-        if attachments_paths_by_filename is not None:
+        if attachments_paths_by_filename and not self.disable_attachments:
             for attachment_filename, attachment_path in attachments_paths_by_filename.items():
                 with open(attachment_path, 'rb') as file:
                     attachment = MIMEBase('application', 'octet-stream')
@@ -125,6 +134,39 @@ class SMTPClient:
         email_.to.add(email['To'])
         email_.subject = email['Subject']
         email_.body = html_message_body if html_message_body is not None else message_body
-        for attachment in attachments_paths:
-            email_.attachments.add(attachment)
+
+        if not self.disable_attachments:
+            for attachment in attachments_paths:
+                email_.attachments.add(attachment)
         email_.send()
+
+    def check_email_mask(self, email: str) -> None:
+        """
+        Checks whether the provided email or a comma-separated list of emails matches any of the
+        patterns (masks) in the address whitelist. The masks may contain '*' as a wildcard character,
+        which is translated into a regex pattern to match zero or more characters.
+
+        Args:
+            email (str): The email address or a comma-separated list of email addresses
+                         to be checked against the whitelist.
+
+        Raises:
+            UserException: If any of the emails do not match any of the masks in the whitelist.
+
+        """
+        emails = [e.strip() for e in email.split(",")]
+
+        for email in emails:
+            matched = False
+            for mask in self.address_whitelist:
+                _mask = re.escape(mask).replace(r'\*', '.*')
+
+                pattern = rf"^{_mask}$"
+
+                if re.match(pattern, email):
+                    matched = True
+                    break
+
+            if not matched:
+                raise UserException(f"Email '{email}' does not match any of the allowed masks.")
+
