@@ -169,4 +169,3 @@ class SMTPClient:
 
             if not matched:
                 raise UserException(f"Email '{email}' does not match any of the allowed masks.")
-

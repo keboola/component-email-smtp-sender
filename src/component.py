@@ -87,17 +87,25 @@ class Component(ComponentBase):
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
     def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
+        server_host = self.configuration.image_parameters.get('server_host')
+        server_port = self.configuration.image_parameters.get('server_port')
+
         if connection_config is None:
             connection_config = self.cfg.connection_config
         proxy_server_config = connection_config.creds_config.proxy_server_config
         oauth_config = connection_config.oauth_config
         creds_config = connection_config.creds_config
+
+        if not (server_host and server_port):
+            server_host = creds_config.server_host
+            server_port = creds_config.server_port
+
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
             sender_email_address=creds_config.sender_email_address or oauth_config.sender_email_address,
             password=creds_config.pswd_sender_password,
-            server_host=creds_config.server_host,
-            server_port=creds_config.server_port,
+            server_host=server_host,
+            server_port=server_port,
             connection_protocol=creds_config.connection_protocol,
             proxy_server_host=proxy_server_config.proxy_server_host,
             proxy_server_port=proxy_server_config.proxy_server_port,
