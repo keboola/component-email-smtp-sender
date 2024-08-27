@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
 from typing import List
 
+
 @dataclass
 class AllowedHosts:
     host: str
     port: int
+
 
 @dataclass
 class StackOverridesParameters:
