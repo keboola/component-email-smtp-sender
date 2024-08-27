@@ -121,8 +121,6 @@ class Component(ComponentBase):
                     return
             raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
 
-        exit()
-
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
             sender_email_address=creds_config.sender_email_address or oauth_config.sender_email_address,

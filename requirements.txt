@@ -1,4 +1,4 @@
-keboola.component==1.6.8
+keboola.component==1.4.4
 kbcstorage==0.7.2
 dataconf==2.3.0
 Jinja2==3.1.3
