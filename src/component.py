@@ -18,6 +18,7 @@ from jinja2 import Template
 
 from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
+from stack_overrides import StackOverridesParameters
 
 
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
@@ -26,6 +27,11 @@ KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
 KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_DEFINITION = 'plaintext_template_definition'
 KEY_HTML_TEMPLATE_DEFINITION = 'html_template_definition'
+
+# STACK OVERRIDES
+KEY_ALLOWED_HOSTS = 'allowed_hosts'
+KEY_ADDRESS_WHITELIST = 'address_whitelist'
+KEY_DISABLE_ATTACHMENTS = 'disable_attachments'
 
 SLEEP_INTERVAL = 0.1
 
@@ -86,26 +92,43 @@ class Component(ComponentBase):
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
-    def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
-        server_host = self.configuration.image_parameters.get('server_host')
-        server_port = self.configuration.image_parameters.get('server_port')
+    def _load_stack_overrides(self) -> StackOverridesParameters:
+        image_parameters = self.configuration.image_parameters or {}
 
+        allowed_hosts = image_parameters.get(KEY_ALLOWED_HOSTS, [])
+        address_whitelist = image_parameters.get(KEY_ADDRESS_WHITELIST, [])
+        disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
+
+        return StackOverridesParameters(
+            allowed_hosts=allowed_hosts,
+            address_whitelist=address_whitelist,
+            disable_attachments=disable_attachments
+        )
+
+    def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
         if connection_config is None:
             connection_config = self.cfg.connection_config
+
         proxy_server_config = connection_config.creds_config.proxy_server_config
         oauth_config = connection_config.oauth_config
         creds_config = connection_config.creds_config
 
-        if not (server_host and server_port):
-            server_host = creds_config.server_host
-            server_port = creds_config.server_port
+        overrides: StackOverridesParameters = self._load_stack_overrides()
+
+        if overrides.allowed_hosts:
+            for item in overrides.allowed_hosts:
+                if item.get('host') == creds_config.server_host and item.get('port') == creds_config.server_port:
+                    return
+            raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
+
+        exit()
 
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
             sender_email_address=creds_config.sender_email_address or oauth_config.sender_email_address,
             password=creds_config.pswd_sender_password,
-            server_host=server_host,
-            server_port=server_port,
+            server_host=creds_config.server_host,
+            server_port=creds_config.server_port,
             connection_protocol=creds_config.connection_protocol,
             proxy_server_host=proxy_server_config.proxy_server_host,
             proxy_server_port=proxy_server_config.proxy_server_port,
@@ -113,7 +136,11 @@ class Component(ComponentBase):
             proxy_server_password=proxy_server_config.pswd_proxy_server_password,
             tenant_id=oauth_config.tenant_id,
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.pswd_client_secret)
+            client_secret=oauth_config.pswd_client_secret,
+            address_whitelist=overrides.address_whitelist,
+            disable_attachments=overrides.disable_attachments
+        )
+
         self._client.init_smtp_server()
 
     @staticmethod
