@@ -197,7 +197,7 @@ class Component(ComponentBase):
         all_attachments = attachments_config.attachments_source == 'all_input_files'
         attachments_column = attachments_config.attachments_column
 
-        if email_data_table_path is not None:
+        if email_data_table_path:
             in_table = open(email_data_table_path)
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
@@ -219,7 +219,10 @@ class Component(ComponentBase):
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
         else:
-            reader = iter(basic_options.recipient_email_addresses.split(','))
+            try:
+                reader = iter(basic_options.recipient_email_addresses.split(','))
+            except AttributeError:
+                raise UserException("No input table found with specified name or no recipient email addresses provided")
 
         for row in reader:
             try:
