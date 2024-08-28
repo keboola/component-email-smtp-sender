@@ -115,14 +115,14 @@ class Component(ComponentBase):
 
         overrides: StackOverridesParameters = self._load_stack_overrides()
 
-        match = False
         if overrides.allowed_hosts:
+            match = False
             for item in overrides.allowed_hosts:
                 if item.get('host') == creds_config.server_host and item.get('port') == creds_config.server_port:
                     match = True
 
-        if not match:
-            raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
+            if not match:
+                raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
 
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
