@@ -114,15 +114,7 @@ class Component(ComponentBase):
         creds_config = connection_config.creds_config
 
         overrides: StackOverridesParameters = self._load_stack_overrides()
-
-        if overrides.allowed_hosts:
-            match = False
-            for item in overrides.allowed_hosts:
-                if item.get('host') == creds_config.server_host and item.get('port') == creds_config.server_port:
-                    match = True
-
-            if not match:
-                raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
+        self.validate_allowed_hosts(overrides, creds_config)
 
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
@@ -143,6 +135,17 @@ class Component(ComponentBase):
         )
 
         self._client.init_smtp_server()
+
+    @staticmethod
+    def validate_allowed_hosts(overrides: StackOverridesParameters, creds_config) -> None:
+        if overrides.allowed_hosts:
+            match = False
+            for item in overrides.allowed_hosts:
+                if item.get('host') == creds_config.server_host and item.get('port') == creds_config.server_port:
+                    match = True
+
+            if not match:
+                raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
 
     @staticmethod
     def load_email_data_table_path(in_tables, email_data_table_name):
@@ -258,9 +261,8 @@ class Component(ComponentBase):
                     if use_html_template:
                         rendered_html_message = Template(html_template_text).render(row)
 
-                    custom_attachments_paths_by_filename = None
+                    custom_attachments_paths_by_filename = attachments_paths_by_filename
                     if not self._client.disable_attachments:
-                        custom_attachments_paths_by_filename = attachments_paths_by_filename
                         if not all_attachments:
                             custom_attachments_paths_by_filename = {
                                 attachment_filename: attachments_paths_by_filename[attachment_filename]
@@ -316,7 +318,7 @@ class Component(ComponentBase):
                     break
                 time.sleep(SLEEP_INTERVAL)
 
-            except UserException as e:
+            except Exception as e:
                 self._results_writer.writerow({
                     **general_error_row,
                     'sender_email_address': self._client.sender_email_address,
