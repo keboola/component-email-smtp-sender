@@ -258,12 +258,14 @@ class Component(ComponentBase):
                     if use_html_template:
                         rendered_html_message = Template(html_template_text).render(row)
 
-                    custom_attachments_paths_by_filename = attachments_paths_by_filename
-                    if not all_attachments:
-                        custom_attachments_paths_by_filename = {
-                            attachment_filename: attachments_paths_by_filename[attachment_filename]
-                            for attachment_filename in json.loads(row[attachments_column])
-                        }
+                    custom_attachments_paths_by_filename = None
+                    if not self._client.disable_attachments:
+                        custom_attachments_paths_by_filename = attachments_paths_by_filename
+                        if not all_attachments:
+                            custom_attachments_paths_by_filename = {
+                                attachment_filename: attachments_paths_by_filename[attachment_filename]
+                                for attachment_filename in json.loads(row[attachments_column])
+                            }
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
@@ -275,22 +277,31 @@ class Component(ComponentBase):
                 status = 'OK'
                 error_message = ''
                 if not dry_run:
+
                     try:
                         logging.info(
                             f"Sending email with subject: `{email_['Subject']}`"
                             f" from `{email_['From']}` to `{email_['To']}`")
+
+                        if self._client.disable_attachments:
+                            attachment_paths = None
+                        else:
+                            attachment_paths = custom_attachments_paths_by_filename.values()
+
                         self._client.send_email(email_, message_body=rendered_plaintext_message,
                                                 html_message_body=rendered_html_message,
-                                                attachments_paths=custom_attachments_paths_by_filename.values())
+                                                attachments_paths=attachment_paths)
+
                     except Exception as e:
                         error_message = str(e)
                         status = 'ERROR'
                         self._results_writer.errors = True
 
                 rendered_html_message_writable = ''
-                if rendered_html_message is not None:
+                if rendered_html_message:
                     rendered_html_message_writable = rendered_html_message
 
+                attachments_to_log = list(custom_attachments_paths_by_filename) if custom_attachments_paths_by_filename else []
                 self._results_writer.writerow(dict(
                     status=status,
                     recipient_email_address=email_['To'],
@@ -298,12 +309,13 @@ class Component(ComponentBase):
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message,
                     html_message_body=rendered_html_message_writable,
-                    attachment_filenames=json.dumps(list(custom_attachments_paths_by_filename)),
+                    attachment_filenames=attachments_to_log,
                     error_message=error_message))
                 if error_message and not continue_on_error:
                     break
                 time.sleep(SLEEP_INTERVAL)
-            except Exception as e:
+
+            except UserException as e:
                 self._results_writer.writerow({
                     **general_error_row,
                     'sender_email_address': self._client.sender_email_address,
