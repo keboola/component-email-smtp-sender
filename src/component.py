@@ -303,8 +303,9 @@ class Component(ComponentBase):
                 if rendered_html_message:
                     rendered_html_message_writable = rendered_html_message
 
-                attachments_to_log = list(custom_attachments_paths_by_filename) \
+                attachments_to_log = json.dumps(list(custom_attachments_paths_by_filename)) \
                     if custom_attachments_paths_by_filename else []
+
                 self._results_writer.writerow(dict(
                     status=status,
                     recipient_email_address=email_['To'],
