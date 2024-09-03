@@ -89,7 +89,7 @@ class ConnectionConfig(ConfigurationBase):
 @dataclass
 class BasicEmailOptions(ConfigurationBase):
     """
-    recipient_email_addresses: comma delimited list of recipient email addresses
+    recipient_email_addresses: comma-delimited list of recipient email addresses
     subject: subject of the email
     message_body: body of the email
     """

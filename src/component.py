@@ -18,6 +18,7 @@ from jinja2 import Template
 
 from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
+from stack_overrides import StackOverridesParameters
 
 
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
@@ -26,6 +27,11 @@ KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
 KEY_HTML_TEMPLATE_FILENAME = 'html_template_filename'
 KEY_PLAINTEXT_TEMPLATE_DEFINITION = 'plaintext_template_definition'
 KEY_HTML_TEMPLATE_DEFINITION = 'html_template_definition'
+
+# STACK OVERRIDES
+KEY_ALLOWED_HOSTS = 'allowed_hosts'
+KEY_ADDRESS_WHITELIST = 'address_whitelist'
+KEY_DISABLE_ATTACHMENTS = 'disable_attachments'
 
 SLEEP_INTERVAL = 0.1
 
@@ -86,12 +92,30 @@ class Component(ComponentBase):
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
+    def _load_stack_overrides(self) -> StackOverridesParameters:
+        image_parameters = self.configuration.image_parameters or {}
+
+        allowed_hosts = image_parameters.get(KEY_ALLOWED_HOSTS, [])
+        address_whitelist = image_parameters.get(KEY_ADDRESS_WHITELIST, [])
+        disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
+
+        return StackOverridesParameters(
+            allowed_hosts=allowed_hosts,
+            address_whitelist=address_whitelist,
+            disable_attachments=disable_attachments
+        )
+
     def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
         if connection_config is None:
             connection_config = self.cfg.connection_config
+
         proxy_server_config = connection_config.creds_config.proxy_server_config
         oauth_config = connection_config.oauth_config
         creds_config = connection_config.creds_config
+
+        overrides: StackOverridesParameters = self._load_stack_overrides()
+        self.validate_allowed_hosts(overrides, creds_config)
+
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
             sender_email_address=creds_config.sender_email_address or oauth_config.sender_email_address,
@@ -105,8 +129,23 @@ class Component(ComponentBase):
             proxy_server_password=proxy_server_config.pswd_proxy_server_password,
             tenant_id=oauth_config.tenant_id,
             client_id=oauth_config.client_id,
-            client_secret=oauth_config.pswd_client_secret)
+            client_secret=oauth_config.pswd_client_secret,
+            address_whitelist=overrides.address_whitelist,
+            disable_attachments=overrides.disable_attachments
+        )
+
         self._client.init_smtp_server()
+
+    @staticmethod
+    def validate_allowed_hosts(overrides: StackOverridesParameters, creds_config) -> None:
+        if overrides.allowed_hosts:
+            match = False
+            for item in overrides.allowed_hosts:
+                if item.get('host') == creds_config.server_host and item.get('port') == creds_config.server_port:
+                    match = True
+
+            if not match:
+                raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
 
     @staticmethod
     def load_email_data_table_path(in_tables, email_data_table_name):
@@ -161,7 +200,7 @@ class Component(ComponentBase):
         all_attachments = attachments_config.attachments_source == 'all_input_files'
         attachments_column = attachments_config.attachments_column
 
-        if email_data_table_path is not None:
+        if email_data_table_path:
             in_table = open(email_data_table_path)
             reader = csv.DictReader(in_table)
             columns = set(reader.fieldnames)
@@ -183,7 +222,10 @@ class Component(ComponentBase):
                     html_template_text = self._read_template_text(plaintext=False)
                     self._validate_template_text(html_template_text, columns)
         else:
-            reader = iter(basic_options.recipient_email_addresses.split(','))
+            try:
+                reader = iter(basic_options.recipient_email_addresses.split(','))
+            except AttributeError:
+                raise UserException("No input table found with specified name or no recipient email addresses provided")
 
         for row in reader:
             try:
@@ -220,11 +262,12 @@ class Component(ComponentBase):
                         rendered_html_message = Template(html_template_text).render(row)
 
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
-                    if not all_attachments:
-                        custom_attachments_paths_by_filename = {
-                            attachment_filename: attachments_paths_by_filename[attachment_filename]
-                            for attachment_filename in json.loads(row[attachments_column])
-                        }
+                    if not self._client.disable_attachments:
+                        if not all_attachments:
+                            custom_attachments_paths_by_filename = {
+                                attachment_filename: attachments_paths_by_filename[attachment_filename]
+                                for attachment_filename in json.loads(row[attachments_column])
+                            }
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
@@ -236,21 +279,32 @@ class Component(ComponentBase):
                 status = 'OK'
                 error_message = ''
                 if not dry_run:
+
                     try:
                         logging.info(
                             f"Sending email with subject: `{email_['Subject']}`"
                             f" from `{email_['From']}` to `{email_['To']}`")
+
+                        if self._client.disable_attachments:
+                            attachment_paths = None
+                        else:
+                            attachment_paths = custom_attachments_paths_by_filename.values()
+
                         self._client.send_email(email_, message_body=rendered_plaintext_message,
                                                 html_message_body=rendered_html_message,
-                                                attachments_paths=custom_attachments_paths_by_filename.values())
+                                                attachments_paths=attachment_paths)
+
                     except Exception as e:
                         error_message = str(e)
                         status = 'ERROR'
                         self._results_writer.errors = True
 
                 rendered_html_message_writable = ''
-                if rendered_html_message is not None:
+                if rendered_html_message:
                     rendered_html_message_writable = rendered_html_message
+
+                attachments_to_log = json.dumps(list(custom_attachments_paths_by_filename)) \
+                    if custom_attachments_paths_by_filename else []
 
                 self._results_writer.writerow(dict(
                     status=status,
@@ -259,11 +313,12 @@ class Component(ComponentBase):
                     subject=email_['Subject'],
                     plaintext_message_body=rendered_plaintext_message,
                     html_message_body=rendered_html_message_writable,
-                    attachment_filenames=json.dumps(list(custom_attachments_paths_by_filename)),
+                    attachment_filenames=attachments_to_log,
                     error_message=error_message))
                 if error_message and not continue_on_error:
                     break
                 time.sleep(SLEEP_INTERVAL)
+
             except Exception as e:
                 self._results_writer.writerow({
                     **general_error_row,
