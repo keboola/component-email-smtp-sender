@@ -20,7 +20,6 @@ from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
 from stack_overrides import StackOverridesParameters
 
-
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
 KEY_HTML_TEMPLATE_COLUMN = 'html_template_column'
 KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
@@ -56,6 +55,7 @@ general_error_row = {
 
 class Component(ComponentBase):
     """Component for sending emails"""
+
     def __init__(self):
         super().__init__()
         self.cfg = Configuration
@@ -496,13 +496,13 @@ class Component(ComponentBase):
             table_id = next(table.source for table in self.configuration.tables_input_mapping
                             if table.destination == table_name)
             storage_url = f'https://{self.environment_variables.stack_id}' if self.environment_variables.stack_id \
-                          else "https://connection.keboola.com"
+                else "https://connection.keboola.com"
             tables = StorageTables(storage_url, self.environment_variables.token)
             preview = tables.preview(table_id)
             reader = csv.DictReader(StringIO(preview))
             return reader.fieldnames
-        except Exception:
-            return ValidationResult("Couldn't fetch columns", MessageType.DANGER)
+        except Exception as e:
+            return ValidationResult(f"Couldn't fetch columns. Error: {e}", MessageType.DANGER)
 
     @sync_action('load_input_table_columns')
     def load_input_table_columns(self) -> List[SelectElement]:
