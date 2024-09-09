@@ -379,12 +379,15 @@ class Component(ComponentBase):
 
     def _get_attachments_filenames_from_table(self, in_table_path: str) -> Set[str]:
         attachments_filenames = set()
-        with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
-            for row in reader:
-                for attachment_filename in json.loads(row[attachments_column]):
-                    attachments_filenames.add(attachment_filename)
+        try:
+            with open(in_table_path) as in_table:
+                reader = csv.DictReader(in_table)
+                attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
+                for row in reader:
+                    for attachment_filename in json.loads(row[attachments_column]):
+                        attachments_filenames.add(attachment_filename)
+        except Exception as e:
+            raise UserException(f"Couldn't read attachments from table {in_table_path} column {attachments_column}: {str(e)}")
         return attachments_filenames
 
     def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
@@ -434,10 +437,13 @@ class Component(ComponentBase):
         return storage_client
 
     def _download_table_from_storage_api(self, table_name) -> str:
-        storage_client = self._init_storage_client()
-        table_id = next(table.source for table in self.configuration.tables_input_mapping
-                        if table.destination == table_name)
-        table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        try:
+            storage_client = self._init_storage_client()
+            table_id = next(table.source for table in self.configuration.tables_input_mapping
+                            if table.destination == table_name)
+            table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        except Exception as e:
+            raise UserException(f"Failed to access table {table_name} in storage: {str(e)}")
         return table_path
 
     def _download_file_from_storage_api(self, file_id) -> str:
