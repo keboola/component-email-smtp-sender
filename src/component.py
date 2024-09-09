@@ -437,23 +437,30 @@ class Component(ComponentBase):
         storage_client = StorageClient(self.environment_variables.url, storage_token)
         return storage_client
 
-    def _download_table_from_storage_api(self, table_name) -> str:
+    def _return_table_path(self, table_name: str) -> str:
+        table_path = None
         if self.configuration.action == 'run':
             all_tables = self.get_input_tables_definitions()
             for table in all_tables:
                 if table_name == table.name:
-                    return table.full_path
+                    table_path = table.full_path
+                    break
 
-        # loading via storage api for sync actions
+        # download via storage api for sync actions
         else:
-            try:
-                storage_client = self._init_storage_client()
-                table_id = next(table.source for table in self.configuration.tables_input_mapping
-                                if table.destination == table_name)
-                table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
-            except Exception as e:
-                raise UserException(f"Failed to access table {table_name} in storage: {str(e)}")
-            return table_path
+            table_path = self._download_table_from_storage_api(table_name)
+
+        return table_path
+
+    def _download_table_from_storage_api(self, table_name) -> str:
+        try:
+            storage_client = self._init_storage_client()
+            table_id = next(table.source for table in self.configuration.tables_input_mapping
+                            if table.destination == table_name)
+            table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        except Exception as e:
+            raise UserException(f"Failed to access table {table_name} in storage: {str(e)}")
+        return table_path
 
     def _download_file_from_storage_api(self, file_id) -> str:
         storage_client = self._init_storage_client()
@@ -477,7 +484,7 @@ class Component(ComponentBase):
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         if self.cfg.advanced_options.message_body_config.message_body_source == 'from_table':
             table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
+            in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 return self._validate_templates_from_table(reader, plaintext)
@@ -542,7 +549,7 @@ class Component(ComponentBase):
         if subject_config.subject_source == 'from_table':
             subject_column = subject_config.subject_column
             table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
+            in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 missing_columns = self._get_missing_columns_from_table(reader, subject_column)
@@ -582,7 +589,7 @@ class Component(ComponentBase):
         try:
             if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
                 table_name = self.cfg.advanced_options.email_data_table_name
-                in_table_path = self._download_table_from_storage_api(table_name)
+                in_table_path = self._return_table_path(table_name)
                 expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
                 input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
                 input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
