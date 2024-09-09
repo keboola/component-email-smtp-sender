@@ -67,14 +67,23 @@ class Component(ComponentBase):
     def run(self):
         self._init_configuration()
         self.init_client()
+
+        validation_results = self.validate_config()
+        if validation_results.type == MessageType.DANGER:
+            raise UserException(validation_results.message)
+
         in_tables = self.get_input_tables_definitions()
         in_files_by_name = self.get_input_file_definitions_grouped_by_name()
         email_data_table_name = self.cfg.advanced_options.email_data_table_name
         email_data_table_path = self.load_email_data_table_path(in_tables, email_data_table_name)
         self.plaintext_template_path, self.html_template_path = \
             self._extract_template_files_full_paths(in_files_by_name)
-        attachments_paths_by_filename = \
-            self.load_attachment_paths_by_filename(in_tables, email_data_table_name, in_files_by_name)
+
+        try:
+            attachments_paths_by_filename = \
+                self.load_attachment_paths_by_filename(in_tables, email_data_table_name, in_files_by_name)
+        except Exception as e:
+            raise UserException(f"Error loading attachments: {str(e)}")
 
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
