@@ -387,7 +387,8 @@ class Component(ComponentBase):
                     for attachment_filename in json.loads(row[attachments_column]):
                         attachments_filenames.add(attachment_filename)
         except Exception as e:
-            raise UserException(f"Couldn't read attachments from table {in_table_path} column {attachments_column}: {str(e)}")
+            raise UserException(f"Couldn't read attachments from table {in_table_path} "
+                                f"column {attachments_column}: {str(e)}")
         return attachments_filenames
 
     def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
