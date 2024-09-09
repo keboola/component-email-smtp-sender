@@ -555,15 +555,18 @@ class Component(ComponentBase):
     def validate_attachments_(self) -> ValidationResult:
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
-            table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
-            expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
-            input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
-            input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
-            missing_attachments = expected_input_filenames - input_filenames - input_tables
-            if missing_attachments:
-                message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
+        try:
+            if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
+                table_name = self.cfg.advanced_options.email_data_table_name
+                in_table_path = self._download_table_from_storage_api(table_name)
+                expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
+                input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
+                input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
+                missing_attachments = expected_input_filenames - input_filenames - input_tables
+                if missing_attachments:
+                    message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
+        except Exception as e:
+            message = f"❌ - Couldn't validate attachments. Error: {e}"
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
