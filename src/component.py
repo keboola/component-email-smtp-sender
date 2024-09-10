@@ -68,9 +68,10 @@ class Component(ComponentBase):
         self._init_configuration()
         self.init_client()
 
-        validation_results = self.validate_config()
-        if validation_results.type == MessageType.DANGER:
-            raise UserException(validation_results.message)
+        if self.cfg.configuration_type == 'advanced':
+            validation_results = self.validate_config()
+            if validation_results.type == MessageType.DANGER:
+                raise UserException(validation_results.message)
 
         in_tables = self.get_input_tables_definitions()
         in_files_by_name = self.get_input_file_definitions_grouped_by_name()
