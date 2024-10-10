@@ -16,11 +16,18 @@ from keboola.component import UserException
 from O365 import Account, EnvTokenBackend
 import msal
 
+KEY_UNENCRYPTED = 'Unencrypted'
+
+KEY_TLS = 'TLS'
+
+KEY_SSL = 'SSL'
+
 
 class SMTPClient:
     """
-    CLient for sending emails
+    Client for sending emails
     """
+
     def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
                  proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
@@ -47,19 +54,24 @@ class SMTPClient:
             socks.wrapmodule(smtplib)
 
         if use_oauth:
-            logging.info('Using O365 SMTP server')
+            logging.info('Using O365 authentication to SMTP server')
             self.init_smtp_server = self._init_o365_smtp_server
             self.send_email = self.send_email_via_o365_oauth
-        elif connection_protocol == 'SSL':
-            logging.info('Using SSL SMTP server')
+        elif connection_protocol == KEY_SSL:
+            logging.info('Using SSL communication to SMTP server')
             self.init_smtp_server = self._init_ssl_smtp_server
             self.send_email = self._send_email_via_ssl_server
-        elif connection_protocol == 'TLS':
-            logging.info('Using TLS SMTP server')
+        elif connection_protocol == KEY_TLS:
+            logging.info('Using TLS communication to SMTP server')
             self.init_smtp_server = self._init_tls_smtp_server
             self.send_email = self._send_email_via_tls_server
+        elif connection_protocol == KEY_UNENCRYPTED:
+            logging.info('Using Unencrypted communication to SMTP server')
+            self.init_smtp_server = self._init_unencrypted_smtp_server
+            self.send_email = self._send_email_via_unencrypted_server
         else:
             raise UserException(f'Invalid connection protocol: {connection_protocol}')
+
 
     def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
                     rendered_html_message: Union[str, None] = None,
@@ -93,11 +105,22 @@ class SMTPClient:
                     email_.attach(attachment)
         return email_
 
+    def _login(self, server):
+        if self.sender_email_address:
+            server.login(self.sender_email_address, self.password)
+
+    def _init_unencrypted_smtp_server(self) -> None:
+        server = smtplib.SMTP(self.server_host, self.server_port)
+        self._login(server)
+        self.smtp_server = server
+
+    def _send_email_via_unencrypted_server(self, email: MIMEMultipart, **kwargs) -> None:
+        self.smtp_server.send_message(email)
+
     def _init_tls_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
         server.starttls()
-        if self.sender_email_address:
-            server.login(self.sender_email_address, self.password)
+        self._login(server)
         self.smtp_server = server
 
     def _send_email_via_tls_server(self, email: MIMEMultipart, **kwargs) -> None:
@@ -105,7 +128,7 @@ class SMTPClient:
 
     def _init_ssl_smtp_server(self) -> None:
         server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port)
-        server.login(self.sender_email_address, self.password)
+        self._login(server)
         self.smtp_server = server
 
     def _send_email_via_ssl_server(self, email: MIMEMultipart, **kwargs) -> None:

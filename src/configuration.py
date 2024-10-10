@@ -70,6 +70,7 @@ class ProxyServerConfig(ConfigurationBase):
 
 @dataclass
 class CredentialsConfig(ConfigurationBase):
+    use_login: bool = False
     sender_email_address: Union[str, None] = None
     pswd_sender_password: Union[str, None] = None
     server_host: str = 'smtp.gmail.com'
