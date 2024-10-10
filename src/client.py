@@ -96,7 +96,8 @@ class SMTPClient:
     def _init_tls_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
         server.starttls()
-        server.login(self.sender_email_address, self.password)
+        if self.sender_email_address:
+            server.login(self.sender_email_address, self.password)
         self.smtp_server = server
 
     def _send_email_via_tls_server(self, email: MIMEMultipart, **kwargs) -> None:
