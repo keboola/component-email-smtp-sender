@@ -67,14 +67,24 @@ class Component(ComponentBase):
     def run(self):
         self._init_configuration()
         self.init_client()
+
+        if self.cfg.configuration_type == 'advanced':
+            validation_results = self.validate_config()
+            if validation_results.type == MessageType.DANGER:
+                raise UserException(validation_results.message)
+
         in_tables = self.get_input_tables_definitions()
         in_files_by_name = self.get_input_file_definitions_grouped_by_name()
         email_data_table_name = self.cfg.advanced_options.email_data_table_name
         email_data_table_path = self.load_email_data_table_path(in_tables, email_data_table_name)
         self.plaintext_template_path, self.html_template_path = \
             self._extract_template_files_full_paths(in_files_by_name)
-        attachments_paths_by_filename = \
-            self.load_attachment_paths_by_filename(in_tables, email_data_table_name, in_files_by_name)
+
+        try:
+            attachments_paths_by_filename = \
+                self.load_attachment_paths_by_filename(in_tables, email_data_table_name, in_files_by_name)
+        except Exception as e:
+            raise UserException(f"Error loading attachments: {str(e)}")
 
         results_table = self.create_out_table_definition('results.csv', write_always=True)
         with open(results_table.full_path, 'w', newline='') as output_file:
@@ -370,12 +380,16 @@ class Component(ComponentBase):
 
     def _get_attachments_filenames_from_table(self, in_table_path: str) -> Set[str]:
         attachments_filenames = set()
-        with open(in_table_path) as in_table:
-            reader = csv.DictReader(in_table)
-            attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
-            for row in reader:
-                for attachment_filename in json.loads(row[attachments_column]):
-                    attachments_filenames.add(attachment_filename)
+        try:
+            with open(in_table_path) as in_table:
+                reader = csv.DictReader(in_table)
+                attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
+                for row in reader:
+                    for attachment_filename in json.loads(row[attachments_column]):
+                        attachments_filenames.add(attachment_filename)
+        except Exception as e:
+            raise UserException(f"Couldn't read attachments from table {in_table_path} "
+                                f"column {attachments_column}: {str(e)}")
         return attachments_filenames
 
     def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
@@ -424,11 +438,29 @@ class Component(ComponentBase):
         storage_client = StorageClient(self.environment_variables.url, storage_token)
         return storage_client
 
+    def _return_table_path(self, table_name: str) -> str:
+        table_path = None
+        if self.configuration.action == 'run':
+            all_tables = self.get_input_tables_definitions()
+            for table in all_tables:
+                if table_name == table.name:
+                    table_path = table.full_path
+                    break
+
+        # download via storage api for sync actions
+        else:
+            table_path = self._download_table_from_storage_api(table_name)
+
+        return table_path
+
     def _download_table_from_storage_api(self, table_name) -> str:
-        storage_client = self._init_storage_client()
-        table_id = next(table.source for table in self.configuration.tables_input_mapping
-                        if table.destination == table_name)
-        table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        try:
+            storage_client = self._init_storage_client()
+            table_id = next(table.source for table in self.configuration.tables_input_mapping
+                            if table.destination == table_name)
+            table_path = storage_client.tables.export_to_file(table_id=table_id, path_name=self.files_in_path)
+        except Exception as e:
+            raise UserException(f"Failed to access table {table_name} in storage: {str(e)}")
         return table_path
 
     def _download_file_from_storage_api(self, file_id) -> str:
@@ -453,7 +485,7 @@ class Component(ComponentBase):
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         if self.cfg.advanced_options.message_body_config.message_body_source == 'from_table':
             table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
+            in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 return self._validate_templates_from_table(reader, plaintext)
@@ -518,7 +550,7 @@ class Component(ComponentBase):
         if subject_config.subject_source == 'from_table':
             subject_column = subject_config.subject_column
             table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
+            in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 missing_columns = self._get_missing_columns_from_table(reader, subject_column)
@@ -555,15 +587,18 @@ class Component(ComponentBase):
     def validate_attachments_(self) -> ValidationResult:
         self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
-        if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
-            table_name = self.cfg.advanced_options.email_data_table_name
-            in_table_path = self._download_table_from_storage_api(table_name)
-            expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
-            input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
-            input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
-            missing_attachments = expected_input_filenames - input_filenames - input_tables
-            if missing_attachments:
-                message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
+        try:
+            if self.cfg.advanced_options.attachments_config.attachments_source != 'all_input_files':
+                table_name = self.cfg.advanced_options.email_data_table_name
+                in_table_path = self._return_table_path(table_name)
+                expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
+                input_filenames = set([file['name'] for file in self._list_files_in_sync_actions()])
+                input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
+                missing_attachments = expected_input_filenames - input_filenames - input_tables
+                if missing_attachments:
+                    message = '❌ - Missing attachments: ' + ', '.join(missing_attachments)
+        except Exception as e:
+            message = f"❌ - Couldn't validate attachments. Error: {e}"
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
