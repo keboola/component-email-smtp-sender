@@ -72,7 +72,6 @@ class SMTPClient:
         else:
             raise UserException(f'Invalid connection protocol: {connection_protocol}')
 
-
     def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
                     rendered_html_message: Union[str, None] = None,
                     attachments_paths_by_filename: Dict[str, str] = None) -> MIMEMultipart:
