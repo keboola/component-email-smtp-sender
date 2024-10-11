@@ -113,6 +113,14 @@
                             "default": false,
                             "propertyOrder": 7
                         },
+                        "without_login": {
+                            "type": "boolean",
+                            "format": "checkbox",
+                            "title": "Use connection without login",
+                            "description": "if checked - connection to the SMTP server will be established without login, password will be ignored",
+                            "default": false,
+                            "propertyOrder": 7
+                        },
                         "proxy_server_config": {
                             "title": "Proxy Server Config",
                             "type": "object",

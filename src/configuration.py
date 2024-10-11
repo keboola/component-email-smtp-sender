@@ -70,7 +70,6 @@ class ProxyServerConfig(ConfigurationBase):
 
 @dataclass
 class CredentialsConfig(ConfigurationBase):
-    use_login: bool = False
     sender_email_address: Union[str, None] = None
     pswd_sender_password: Union[str, None] = None
     server_host: str = 'smtp.gmail.com'
@@ -78,6 +77,7 @@ class CredentialsConfig(ConfigurationBase):
     connection_protocol: str = 'SSL'
     use_proxy_server: bool = False
     proxy_server_config: ProxyServerConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    without_login: bool = False
 
 
 @dataclass

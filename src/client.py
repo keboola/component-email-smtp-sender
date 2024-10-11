@@ -33,7 +33,8 @@ class SMTPClient:
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
                  connection_protocol: str = 'SSL', use_oauth: bool = False, tenant_id: Union[str, None] = None,
                  client_id: Union[str, None] = None, client_secret: Union[str, None] = None,
-                 address_whitelist: List[str] = None, disable_attachments: bool = False) -> None:
+                 address_whitelist: List[str] = None, disable_attachments: bool = False,
+                 without_login: bool = False) -> None:
 
         self.sender_email_address = sender_email_address
         self.password = password
@@ -42,6 +43,7 @@ class SMTPClient:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
+        self.without_login = without_login
 
         # Customizations
         self.address_whitelist = address_whitelist
@@ -105,7 +107,7 @@ class SMTPClient:
         return email_
 
     def _login(self, server):
-        if self.sender_email_address:
+        if not self.without_login:
             server.login(self.sender_email_address, self.password)
 
     def _init_unencrypted_smtp_server(self) -> None:
