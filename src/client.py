@@ -109,6 +109,7 @@ class SMTPClient:
     def _login(self, server):
         if not self.without_login:
             server.login(self.sender_email_address, self.password)
+        logging.info('Connection to SMTP without login')
 
     def _init_unencrypted_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
