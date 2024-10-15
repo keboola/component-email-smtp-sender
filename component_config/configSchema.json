@@ -119,13 +119,13 @@
                             "title": "Use connection without login",
                             "description": "if checked - connection to the SMTP server will be established without login, password will be ignored",
                             "default": false,
-                            "propertyOrder": 7
+                            "propertyOrder": 8
                         },
                         "proxy_server_config": {
                             "title": "Proxy Server Config",
                             "type": "object",
                             "format": "grid-strict",
-                            "propertyOrder": 8,
+                            "propertyOrder": 9,
                             "options": {
                                 "dependencies": {
                                     "use_proxy_server": true
