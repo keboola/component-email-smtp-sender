@@ -77,6 +77,7 @@ class CredentialsConfig(ConfigurationBase):
     connection_protocol: str = 'SSL'
     use_proxy_server: bool = False
     proxy_server_config: ProxyServerConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    without_login: bool = False
 
 
 @dataclass

@@ -16,17 +16,25 @@ from keboola.component import UserException
 from O365 import Account, EnvTokenBackend
 import msal
 
+KEY_UNENCRYPTED = 'Unencrypted'
+
+KEY_TLS = 'TLS'
+
+KEY_SSL = 'SSL'
+
 
 class SMTPClient:
     """
-    CLient for sending emails
+    Client for sending emails
     """
+
     def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
                  proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
                  proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
                  connection_protocol: str = 'SSL', use_oauth: bool = False, tenant_id: Union[str, None] = None,
                  client_id: Union[str, None] = None, client_secret: Union[str, None] = None,
-                 address_whitelist: List[str] = None, disable_attachments: bool = False) -> None:
+                 address_whitelist: List[str] = None, disable_attachments: bool = False,
+                 without_login: bool = False) -> None:
 
         self.sender_email_address = sender_email_address
         self.password = password
@@ -35,6 +43,7 @@ class SMTPClient:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
+        self.without_login = without_login
 
         # Customizations
         self.address_whitelist = address_whitelist
@@ -47,17 +56,21 @@ class SMTPClient:
             socks.wrapmodule(smtplib)
 
         if use_oauth:
-            logging.info('Using O365 SMTP server')
+            logging.info('Using O365 authentication to SMTP server')
             self.init_smtp_server = self._init_o365_smtp_server
             self.send_email = self.send_email_via_o365_oauth
-        elif connection_protocol == 'SSL':
-            logging.info('Using SSL SMTP server')
+        elif connection_protocol == KEY_SSL:
+            logging.info('Using SSL communication to SMTP server')
             self.init_smtp_server = self._init_ssl_smtp_server
             self.send_email = self._send_email_via_ssl_server
-        elif connection_protocol == 'TLS':
-            logging.info('Using TLS SMTP server')
+        elif connection_protocol == KEY_TLS:
+            logging.info('Using TLS communication to SMTP server')
             self.init_smtp_server = self._init_tls_smtp_server
             self.send_email = self._send_email_via_tls_server
+        elif connection_protocol == KEY_UNENCRYPTED:
+            logging.info('Using Unencrypted communication to SMTP server')
+            self.init_smtp_server = self._init_unencrypted_smtp_server
+            self.send_email = self._send_email_via_unencrypted_server
         else:
             raise UserException(f'Invalid connection protocol: {connection_protocol}')
 
@@ -93,10 +106,23 @@ class SMTPClient:
                     email_.attach(attachment)
         return email_
 
+    def _login(self, server):
+        if not self.without_login:
+            server.login(self.sender_email_address, self.password)
+        logging.info('Connection to SMTP without login')
+
+    def _init_unencrypted_smtp_server(self) -> None:
+        server = smtplib.SMTP(self.server_host, self.server_port)
+        self._login(server)
+        self.smtp_server = server
+
+    def _send_email_via_unencrypted_server(self, email: MIMEMultipart, **kwargs) -> None:
+        self.smtp_server.send_message(email)
+
     def _init_tls_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
         server.starttls()
-        server.login(self.sender_email_address, self.password)
+        self._login(server)
         self.smtp_server = server
 
     def _send_email_via_tls_server(self, email: MIMEMultipart, **kwargs) -> None:
@@ -104,7 +130,7 @@ class SMTPClient:
 
     def _init_ssl_smtp_server(self) -> None:
         server = smtplib.SMTP_SSL(host=self.server_host, port=self.server_port)
-        server.login(self.sender_email_address, self.password)
+        self._login(server)
         self.smtp_server = server
 
     def _send_email_via_ssl_server(self, email: MIMEMultipart, **kwargs) -> None:
