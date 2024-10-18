@@ -20,6 +20,8 @@ from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
 from stack_overrides import StackOverridesParameters
 
+KEY_ALLOWED_SENDER_EMAIL_ADDRESSES = 'allowed_sender_email_addresses'
+
 KEY_PLAINTEXT_TEMPLATE_COLUMN = 'plaintext_template_column'
 KEY_HTML_TEMPLATE_COLUMN = 'html_template_column'
 KEY_PLAINTEXT_TEMPLATE_FILENAME = 'plaintext_template_filename'
@@ -106,13 +108,15 @@ class Component(ComponentBase):
         image_parameters = self.configuration.image_parameters or {}
 
         allowed_hosts = image_parameters.get(KEY_ALLOWED_HOSTS, [])
+        allowed_sender_email_addresses = image_parameters.get(KEY_ALLOWED_SENDER_EMAIL_ADDRESSES, [])
         address_whitelist = image_parameters.get(KEY_ADDRESS_WHITELIST, [])
         disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
 
         return StackOverridesParameters(
             allowed_hosts=allowed_hosts,
             address_whitelist=address_whitelist,
-            disable_attachments=disable_attachments
+            disable_attachments=disable_attachments,
+            allowed_sender_email_addresses=allowed_sender_email_addresses
         )
 
     def init_client(self, connection_config: Union[ConnectionConfig, None] = None) -> None:
@@ -125,6 +129,7 @@ class Component(ComponentBase):
 
         overrides: StackOverridesParameters = self._load_stack_overrides()
         self.validate_allowed_hosts(overrides, creds_config)
+        self.validate_allowed_sender_email_addresses(overrides, creds_config)
 
         self._client = SMTPClient(
             use_oauth=connection_config.use_oauth,
@@ -146,6 +151,15 @@ class Component(ComponentBase):
         )
 
         self._client.init_smtp_server()
+
+    @staticmethod
+    def validate_allowed_sender_email_addresses(overrides, creds_config):
+        if overrides.allowed_sender_email_addresses:
+            if not creds_config.sender_email_address:
+                raise UserException("Sender email address is not set in the configuration")
+            if creds_config.sender_email_address not in overrides.allowed_sender_email_addresses:
+                raise UserException(
+                    f"Sender email address {creds_config.sender_email_address} is not allowed for your stack")
 
     @staticmethod
     def validate_allowed_hosts(overrides: StackOverridesParameters, creds_config) -> None:

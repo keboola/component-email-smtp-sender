@@ -1,0 +1,1 @@
+For some stack is overridden config schemas and some other stack parameters. Link: https://github.com/keboola/infrastructure-plugin-update-components/blob/master/stacks
