@@ -628,10 +628,12 @@ class Component(ComponentBase):
         validation_methods = [
             self.test_smtp_server_connection_,
             self.validate_subject_,
-            self.validate_plaintext_template_,
-            self.validate_attachments_]
+            self.validate_plaintext_template_]
         if self.cfg.advanced_options.message_body_config.use_html_template:
             validation_methods.insert(3, self.validate_html_template_)
+
+        if not self._client.disable_attachments:
+            validation_methods.append(self.validate_attachments_)
 
         messages = [validation_method().message for validation_method in validation_methods]
 
