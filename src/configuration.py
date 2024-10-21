@@ -29,7 +29,7 @@ class ConfigurationBase:
         Returns:
 
         """
-        json_conf = json.dumps(configuration)
+        json_conf = json.dumps(configuration, ensure_ascii=False)
         json_conf = ConfigurationBase._convert_private_value(json_conf)
         return dataconf.loads(json_conf, cls, ignore_unexpected=True)
 
