@@ -632,7 +632,9 @@ class Component(ComponentBase):
         if self.cfg.advanced_options.message_body_config.use_html_template:
             validation_methods.insert(3, self.validate_html_template_)
 
-        if not self._client.disable_attachments:
+        image_parameters = self.configuration.image_parameters or {}
+        disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
+        if not disable_attachments:
             validation_methods.append(self.validate_attachments_)
 
         messages = [validation_method().message for validation_method in validation_methods]
