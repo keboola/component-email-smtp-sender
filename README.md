@@ -69,6 +69,10 @@ It lets you choose from multiple sourcing options for subject, message body and 
 - **Shared attachments** - if checked, all non-template files in the files input mapping and tables from table input mapping will be attached to the email for all recipients (Attachments Source = `All Input Files`)
  - arbitrary number of attachment files - attachments can be of any file type or simply tables in input mapping (certain SMTP server providers forbid certain file types since they are considered potentially dangerous)
 
+
+- **_NOTE 1_** - The maximum attachment size that the standard backend can process is 25MB. When running on a large backend, this limit increases to 150MB. However, the SMTP server may have its own limit.
+- **_NOTE 2_** - Tables in the storage uses efficient compression, so the size of a CSV export file can be significantly larger than the table size displayed in the UI.
+
 **Dry Run** - if checked - emails are built, but not sent
 **Continue On Error** - if not checked - first unsendable email will crash the component - results table will still be populated with sent emails detail
 
