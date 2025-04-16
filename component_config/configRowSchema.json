@@ -299,10 +299,17 @@
             }
           }
         },
+        "include_attachments": {
+          "type": "boolean",
+          "title": "Include Attachments",
+          "format": "checkbox",
+          "default": true,
+          "propertyOrder": 5
+        },
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 5,
+          "propertyOrder": 6,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",
@@ -311,7 +318,10 @@
               "enum": ["from_table", "all_input_files"],
               "options": {
                 "enum_titles": ["From Table", "All Input Files and Tables"],
-                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping",
+                "dependencies": {
+                  "include_attachments": true
+                }
               }
             },
             "attachments_column": {
@@ -354,7 +364,7 @@
           "type": "button",
           "format": "sync-action",
           "description": "Validates the whole config",
-          "propertyOrder": 8,
+          "propertyOrder": 9,
           "options": {
             "async": {
               "label": "VALIDATE CONFIG",
@@ -370,7 +380,7 @@
       "title": "Dry run",
       "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
       "default": false,
-      "propertyOrder": 6
+      "propertyOrder": 7
     },
     "continue_on_error": {
       "type": "boolean",
@@ -378,7 +388,7 @@
       "title": "Continue On Error",
       "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
       "default": true,
-      "propertyOrder": 7
+      "propertyOrder": 8
     }
   }
 }
