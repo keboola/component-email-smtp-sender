@@ -287,7 +287,7 @@ class Component(ComponentBase):
                         rendered_html_message = Template(html_template_text).render(row)
 
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
-                    if not self._client.disable_attachments:
+                    if self.cfg.advanced_options.include_attachments and not self._client.disable_attachments:
                         if not all_attachments:
                             custom_attachments_paths_by_filename = {
                                 attachment_filename: attachments_paths_by_filename[attachment_filename]
@@ -310,7 +310,7 @@ class Component(ComponentBase):
                             f"Sending email with subject: `{email_['Subject']}`"
                             f" from `{email_['From']}` to `{email_['To']}`")
 
-                        if self._client.disable_attachments:
+                        if not self.cfg.advanced_options.include_attachments or self._client.disable_attachments:
                             attachment_paths = None
                         else:
                             attachment_paths = custom_attachments_paths_by_filename.values()
@@ -634,7 +634,7 @@ class Component(ComponentBase):
 
         image_parameters = self.configuration.image_parameters or {}
         disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
-        if not disable_attachments:
+        if self.cfg.advanced_options.include_attachments and not disable_attachments:
             validation_methods.append(self.validate_attachments_)
 
         messages = [validation_method().message for validation_method in validation_methods]

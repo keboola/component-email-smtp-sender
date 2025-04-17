@@ -299,10 +299,17 @@
             }
           }
         },
+        "include_attachments": {
+          "type": "boolean",
+          "title": "Include Attachments",
+          "format": "checkbox",
+          "default": true,
+          "propertyOrder": 5
+        },
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 5,
+          "propertyOrder": 6,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",
@@ -348,13 +355,18 @@
                 "dependencies": {"attachments_source":  "from_table"}
               }
             }
+          },
+          "options": {
+            "dependencies": {
+              "include_attachments": true
+            }
           }
         },
         "validate_config": {
           "type": "button",
           "format": "sync-action",
           "description": "Validates the whole config",
-          "propertyOrder": 8,
+          "propertyOrder": 9,
           "options": {
             "async": {
               "label": "VALIDATE CONFIG",
@@ -370,7 +382,7 @@
       "title": "Dry run",
       "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
       "default": false,
-      "propertyOrder": 6
+      "propertyOrder": 7
     },
     "continue_on_error": {
       "type": "boolean",
@@ -378,7 +390,7 @@
       "title": "Continue On Error",
       "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
       "default": true,
-      "propertyOrder": 7
+      "propertyOrder": 8
     }
   }
 }

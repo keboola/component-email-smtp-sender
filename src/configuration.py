@@ -147,6 +147,7 @@ class AdvancedEmailOptions(ConfigurationBase):
     recipient_email_address_column: Union[str, None] = None
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    include_attachments: bool = True
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
 
 

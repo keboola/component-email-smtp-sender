@@ -62,6 +62,8 @@ It lets you choose from multiple sourcing options for subject, message body and 
 - **Plaintext Message Body Template** - Jinja2 formatted plaintext message body (Message Body Source = `From Template Definition`)
 - **HTML Message Body Template** - Jinja2 formatted html message body (Message Body Source = `From Template Definition`)
 
+**Include Attachments** - (boolean) default True
+
 **Attachments Config**
 
 - **Attachments Source** - `From Table`, `All Input Files`
