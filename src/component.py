@@ -311,7 +311,7 @@ class Component(ComponentBase):
                             f" from `{email_['From']}` to `{email_['To']}`")
 
                         if not self.cfg.advanced_options.include_attachments or self._client.disable_attachments:
-                            attachment_paths = None
+                            attachment_paths = []
                         else:
                             attachment_paths = custom_attachments_paths_by_filename.values()
 
