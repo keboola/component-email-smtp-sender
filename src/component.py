@@ -1,23 +1,23 @@
 import csv
+import json
 import logging
-from typing import List, Tuple, Union, Dict, Set
+import os
 import re
 import time
-import json
-import os
 from io import StringIO
 from pathlib import Path
+from typing import Dict, List, Set, Tuple, Union
 
-from keboola.component.base import ComponentBase, sync_action
-from keboola.component.exceptions import UserException
-from keboola.component.sync_actions import ValidationResult, MessageType, SelectElement
-from keboola.component.dao import FileDefinition
+from jinja2 import Template
 from kbcstorage.client import Client as StorageClient
 from kbcstorage.tables import Tables as StorageTables
-from jinja2 import Template
+from keboola.component.base import ComponentBase, sync_action
+from keboola.component.dao import FileDefinition
+from keboola.component.exceptions import UserException
+from keboola.component.sync_actions import MessageType, SelectElement, ValidationResult
 
-from configuration import Configuration, ConnectionConfig, AdvancedEmailOptions
 from client import SMTPClient
+from configuration import AdvancedEmailOptions, Configuration, ConnectionConfig
 from stack_overrides import StackOverridesParameters
 
 KEY_ALLOWED_SENDER_EMAIL_ADDRESSES = 'allowed_sender_email_addresses'

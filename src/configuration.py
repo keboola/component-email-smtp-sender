@@ -1,10 +1,10 @@
 import dataclasses
+import json
 from dataclasses import dataclass
 from typing import List, Union
-import json
 
-from pyhocon import ConfigTree
 import dataconf
+from pyhocon import ConfigTree
 
 
 class ConfigurationBase:

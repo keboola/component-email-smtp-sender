@@ -1,20 +1,19 @@
+import json
 import logging
-from typing import Union, Dict, List
 import os
 import re
-import json
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
-
 import smtplib
 import socket
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Dict, List, Union
+
+import msal
 import socks
 from keboola.component import UserException
 from O365 import Account, EnvTokenBackend
-import msal
 
 KEY_UNENCRYPTED = 'Unencrypted'
 
