@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import os
 import re
 import time
 from io import StringIO
@@ -195,10 +194,10 @@ class Component(ComponentBase):
             file = files[0]
             original_path = file.full_path
             if original_path not in [self.plaintext_template_path, self.html_template_path]:
-                directory = os.path.split(original_path)[0]
-                new_path = os.path.join(directory, file.name)
-                Path.rename(original_path, new_path)
-                attachment_files[file.name] = new_path
+                directory = Path(original_path).parent
+                new_path = directory / file.name
+                Path(original_path).rename(new_path)
+                attachment_files[file.name] = str(new_path)
         return attachment_files
 
     def load_attachment_paths_by_filename(self, in_tables, email_data_table_name, in_files_by_name):
