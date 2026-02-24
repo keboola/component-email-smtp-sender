@@ -1,26 +1,25 @@
+import json
 import logging
-from typing import Union, Dict, List
 import os
 import re
-import json
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
-
 import smtplib
 import socket
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Dict, List, Union
+
+import msal
 import socks
 from keboola.component import UserException
 from O365 import Account, EnvTokenBackend
-import msal
 
-KEY_UNENCRYPTED = 'Unencrypted'
+KEY_UNENCRYPTED = "Unencrypted"
 
-KEY_TLS = 'TLS'
+KEY_TLS = "TLS"
 
-KEY_SSL = 'SSL'
+KEY_SSL = "SSL"
 
 
 class SMTPClient:
@@ -28,13 +27,25 @@ class SMTPClient:
     Client for sending emails
     """
 
-    def __init__(self, sender_email_address: str, password: str, server_host: str, server_port: int,
-                 proxy_server_host: Union[str, None] = None, proxy_server_port: Union[int, None] = None,
-                 proxy_server_username: Union[str, None] = None, proxy_server_password: Union[str, None] = None,
-                 connection_protocol: str = 'SSL', use_oauth: bool = False, tenant_id: Union[str, None] = None,
-                 client_id: Union[str, None] = None, client_secret: Union[str, None] = None,
-                 address_whitelist: List[str] = None, disable_attachments: bool = False,
-                 without_login: bool = False) -> None:
+    def __init__(
+        self,
+        sender_email_address: str,
+        password: str,
+        server_host: str,
+        server_port: int,
+        proxy_server_host: Union[str, None] = None,
+        proxy_server_port: Union[int, None] = None,
+        proxy_server_username: Union[str, None] = None,
+        proxy_server_password: Union[str, None] = None,
+        connection_protocol: str = "SSL",
+        use_oauth: bool = False,
+        tenant_id: Union[str, None] = None,
+        client_id: Union[str, None] = None,
+        client_secret: Union[str, None] = None,
+        address_whitelist: List[str] = None,
+        disable_attachments: bool = False,
+        without_login: bool = False,
+    ) -> None:
 
         self.sender_email_address = sender_email_address
         self.password = password
@@ -50,66 +61,76 @@ class SMTPClient:
         self.disable_attachments = disable_attachments
 
         if proxy_server_host:
-            socks.setdefaultproxy(proxy_type=socks.PROXY_TYPE_SOCKS5, addr=proxy_server_host, port=proxy_server_port,
-                                  username=proxy_server_username, password=proxy_server_password)
+            socks.setdefaultproxy(
+                proxy_type=socks.PROXY_TYPE_SOCKS5,
+                addr=proxy_server_host,
+                port=proxy_server_port,
+                username=proxy_server_username,
+                password=proxy_server_password,
+            )
             socket.socket = socks.socksocket
             socks.wrapmodule(smtplib)
 
         if use_oauth:
-            logging.info('Using O365 authentication to SMTP server')
+            logging.info("Using O365 authentication to SMTP server")
             self.init_smtp_server = self._init_o365_smtp_server
             self.send_email = self.send_email_via_o365_oauth
         elif connection_protocol == KEY_SSL:
-            logging.info('Using SSL communication to SMTP server')
+            logging.info("Using SSL communication to SMTP server")
             self.init_smtp_server = self._init_ssl_smtp_server
             self.send_email = self._send_email_via_ssl_server
         elif connection_protocol == KEY_TLS:
-            logging.info('Using TLS communication to SMTP server')
+            logging.info("Using TLS communication to SMTP server")
             self.init_smtp_server = self._init_tls_smtp_server
             self.send_email = self._send_email_via_tls_server
         elif connection_protocol == KEY_UNENCRYPTED:
-            logging.info('Using Unencrypted communication to SMTP server')
+            logging.info("Using Unencrypted communication to SMTP server")
             self.init_smtp_server = self._init_unencrypted_smtp_server
             self.send_email = self._send_email_via_unencrypted_server
         else:
-            raise UserException(f'Invalid connection protocol: {connection_protocol}')
+            raise UserException(f"Invalid connection protocol: {connection_protocol}")
 
-    def build_email(self, *, recipient_email_address: str, subject: str, rendered_plaintext_message: str,
-                    rendered_html_message: Union[str, None] = None,
-                    attachments_paths_by_filename: Dict[str, str] = None) -> MIMEMultipart:
+    def build_email(
+        self,
+        *,
+        recipient_email_address: str,
+        subject: str,
+        rendered_plaintext_message: str,
+        rendered_html_message: Union[str, None] = None,
+        attachments_paths_by_filename: Dict[str, str] = None,
+    ) -> MIMEMultipart:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist)
         """
         if self.address_whitelist:
             self.check_email_mask(recipient_email_address)
 
-        email_ = MIMEMultipart('mixed')
-        email_['From'] = self.sender_email_address
-        email_['To'] = recipient_email_address
-        email_['Subject'] = subject
+        email_ = MIMEMultipart("mixed")
+        email_["From"] = self.sender_email_address
+        email_["To"] = recipient_email_address
+        email_["Subject"] = subject
 
-        email_message = MIMEMultipart('alternative')
-        email_message.attach(MIMEText(rendered_plaintext_message, 'plain'))
+        email_message = MIMEMultipart("alternative")
+        email_message.attach(MIMEText(rendered_plaintext_message, "plain"))
         if rendered_html_message is not None:
-            email_message.attach(MIMEText(rendered_html_message, 'html'))
+            email_message.attach(MIMEText(rendered_html_message, "html"))
 
         email_.attach(email_message)
 
         if attachments_paths_by_filename and not self.disable_attachments:
             for attachment_filename, attachment_path in attachments_paths_by_filename.items():
-                with open(attachment_path, 'rb') as file:
-                    attachment = MIMEBase('application', 'octet-stream')
+                with open(attachment_path, "rb") as file:
+                    attachment = MIMEBase("application", "octet-stream")
                     attachment.set_payload(file.read())
                     encoders.encode_base64(attachment)
-                    attachment.add_header(
-                        'Content-Disposition', f'attachment; filename={attachment_filename}')
+                    attachment.add_header("Content-Disposition", f"attachment; filename={attachment_filename}")
                     email_.attach(attachment)
         return email_
 
     def _login(self, server):
         if not self.without_login:
             server.login(self.sender_email_address, self.password)
-        logging.info('Connection to SMTP without login')
+        logging.info("Connection to SMTP without login")
 
     def _init_unencrypted_smtp_server(self) -> None:
         server = smtplib.SMTP(self.server_host, self.server_port)
@@ -139,26 +160,36 @@ class SMTPClient:
     def _init_o365_smtp_server(self) -> None:
         def get_access_token() -> Dict[str, Union[str, int]]:
             authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-            app = msal.ConfidentialClientApplication(self.client_id, authority=authority,
-                                                     client_credential=self.client_secret)
+            app = msal.ConfidentialClientApplication(
+                self.client_id, authority=authority, client_credential=self.client_secret
+            )
             result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
             if "access_token" in result:
                 return result
             raise Exception(f"Failed to acquire token: {result.get('error')}")
 
         access_token_result = get_access_token()
-        os.environ['O365TOKEN'] = json.dumps(access_token_result)
-        account = Account(credentials=(self.client_id, self.client_secret), auth_flow_type='credentials',
-                          tenant_id=self.tenant_id, token_backend=EnvTokenBackend())
+        os.environ["O365TOKEN"] = json.dumps(access_token_result)
+        account = Account(
+            credentials=(self.client_id, self.client_secret),
+            auth_flow_type="credentials",
+            tenant_id=self.tenant_id,
+            token_backend=EnvTokenBackend(),
+        )
         account.authenticate()
         self.smtp_server = account
 
-    def send_email_via_o365_oauth(self, email: MIMEMultipart, message_body: str,
-                                  attachments_paths: List[str],
-                                  html_message_body: Union[str, None] = None, **kwargs) -> None:
+    def send_email_via_o365_oauth(
+        self,
+        email: MIMEMultipart,
+        message_body: str,
+        attachments_paths: List[str],
+        html_message_body: Union[str, None] = None,
+        **kwargs,
+    ) -> None:
         email_ = self.smtp_server.new_message(resource=self.sender_email_address)
-        email_.to.add(email['To'])
-        email_.subject = email['Subject']
+        email_.to.add(email["To"])
+        email_.subject = email["Subject"]
         email_.body = html_message_body if html_message_body is not None else message_body
 
         if not self.disable_attachments:
@@ -185,7 +216,7 @@ class SMTPClient:
         for email in emails:
             matched = False
             for mask in self.address_whitelist:
-                _mask = re.escape(mask).replace(r'\*', '.*')
+                _mask = re.escape(mask).replace(r"\*", ".*")
 
                 pattern = rf"^{_mask}$"
 

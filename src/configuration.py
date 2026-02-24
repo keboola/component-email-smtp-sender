@@ -1,10 +1,10 @@
 import dataclasses
+import json
 from dataclasses import dataclass
 from typing import List, Union
-import json
 
-from pyhocon import ConfigTree
 import dataconf
+from pyhocon import ConfigTree
 
 
 class ConfigurationBase:
@@ -40,10 +40,11 @@ class ConfigurationBase:
         Returns: List[str]
 
         """
-        return [cls._convert_private_value_inv(f.name)
-                for f in dataclasses.fields(cls)
-                if f.default == dataclasses.MISSING
-                and f.default_factory == dataclasses.MISSING]
+        return [
+            cls._convert_private_value_inv(f.name)
+            for f in dataclasses.fields(cls)
+            if f.default == dataclasses.MISSING and f.default_factory == dataclasses.MISSING
+        ]
 
     def __getitem__(self, item, default=None):
         return getattr(self, item, default)
@@ -72,9 +73,9 @@ class ProxyServerConfig(ConfigurationBase):
 class CredentialsConfig(ConfigurationBase):
     sender_email_address: Union[str, None] = None
     pswd_sender_password: Union[str, None] = None
-    server_host: str = 'smtp.gmail.com'
+    server_host: str = "smtp.gmail.com"
     server_port: int = 465
-    connection_protocol: str = 'SSL'
+    connection_protocol: str = "SSL"
     use_proxy_server: bool = False
     proxy_server_config: ProxyServerConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     without_login: bool = False
@@ -94,6 +95,7 @@ class BasicEmailOptions(ConfigurationBase):
     subject: subject of the email
     message_body: body of the email
     """
+
     recipient_email_addresses: Union[str, None] = None
     subject: Union[str, None] = None
     message_body: Union[str, None] = None
@@ -107,6 +109,7 @@ class SubjectConfig(ConfigurationBase):
     "from_table" -> "subject_column"
     "from_template_definition" -> "subject_template_definition"
     """
+
     subject_source: Union[str, None] = None
     subject_column: Union[str, None] = None
     subject_template_definition: Union[str, None] = None
@@ -120,6 +123,7 @@ class MessageBodyConfig(ConfigurationBase):
     "from_template_file" -> "plaintext_template_filename" + "html_template_filename"
     "from_template_definition" -> "plaintext_template_definition" + "html_template_definition"
     """
+
     message_body_source: Union[str, None] = None
     use_html_template: bool = False
     plaintext_template_column: Union[str, None] = None
@@ -137,6 +141,7 @@ class AttachmentsConfig(ConfigurationBase):
     "all_input_files"
     "from_table" -> "attachments_column"
     """
+
     attachments_source: Union[str, None] = None
     attachments_column: Union[str, None] = None
 
