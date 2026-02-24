@@ -10,3 +10,7 @@ __pycache__/
 # kbc datafolder
 /data
 /venv
+
+# uv / build artifacts
+*.egg-info/
+.venv/

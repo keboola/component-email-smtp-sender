@@ -1,5 +1,5 @@
 #!/bin/sh
 set -e
 
-flake8 --config=flake8.cfg
+ruff check .
 python -m unittest discover
