@@ -77,6 +77,7 @@ class Component(ComponentBase):
 
     def run(self):
         self._init_configuration()
+        self._validate_run_configuration()
         self.init_client()
 
         if self.cfg.configuration_type == "advanced":
@@ -109,10 +110,7 @@ class Component(ComponentBase):
             attachments_config = self.cfg.advanced_options.attachments_config
             data_preview_table = attachments_config.data_preview_table
 
-            if not data_preview_table:
-                raise UserException("Data preview table must be specified for data preview mode")
-
-            # Resolve table path and table_id from input mapping
+            # Resolve table path and table_id from input mapping (validation already done in _validate_run_configuration)
             table_path = self._resolve_data_source_table_path(data_preview_table)
             table_id = next(
                 table.source
@@ -151,30 +149,20 @@ class Component(ComponentBase):
                 "total_count": total_row_count,
             }
 
-        # Handle custom link
+        # Handle custom link (validation already done in _validate_run_configuration)
         custom_link = None
         if self.cfg.configuration_type == "advanced" and self.cfg.advanced_options.include_custom_link:
             advanced_options = self.cfg.advanced_options
             custom_link_url = advanced_options.custom_link_url.strip()
 
-            # Validate URL is not empty
-            if not custom_link_url or len(custom_link_url) < 5:
-                raise UserException("Custom link URL must be at least 5 characters long")
-
-            # Check if {table_id} placeholder is used
+            # Resolve table_id from input mapping if {table_id} placeholder is used
             if "{table_id}" in custom_link_url:
                 custom_link_table = advanced_options.custom_link_table
-                if not custom_link_table:
-                    raise UserException("Custom link table must be specified when using {table_id} placeholder in URL")
-                # Resolve table_id from input mapping
-                try:
-                    table_id = next(
-                        table.source
-                        for table in self.configuration.tables_input_mapping
-                        if table.destination == custom_link_table
-                    )
-                except StopIteration:
-                    raise UserException(f"Custom link table '{custom_link_table}' not found in input mapping")
+                table_id = next(
+                    table.source
+                    for table in self.configuration.tables_input_mapping
+                    if table.destination == custom_link_table
+                )
             else:
                 table_id = ""
 
@@ -182,13 +170,6 @@ class Component(ComponentBase):
             stack_id = self.environment_variables.stack_id
             project_id = self.environment_variables.project_id
             run_id = self.environment_variables.run_id
-
-            if not stack_id:
-                raise UserException("Stack ID not available for custom link URL resolution")
-            if not project_id:
-                raise UserException("Project ID not available for custom link URL resolution")
-            if not run_id:
-                raise UserException("Run ID not available for custom link URL resolution")
 
             # Format URL with placeholders
             resolved_url = custom_link_url.format(
@@ -216,6 +197,59 @@ class Component(ComponentBase):
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
+
+    def _validate_run_configuration(self) -> None:
+        """
+        Validate configuration for data preview and custom link features.
+        Should be called after configuration is loaded and before actual work begins.
+        Skips validation for basic mode.
+        """
+        # Skip validation in basic mode
+        if self.cfg.configuration_type == "basic":
+            return
+
+        # Validate data preview configuration
+        if (
+            self.cfg.advanced_options.include_attachments
+            and self.cfg.advanced_options.attachments_config.attachments_source == "data_preview"
+        ):
+            data_preview_table = self.cfg.advanced_options.attachments_config.data_preview_table
+            if not data_preview_table:
+                raise UserException("Data preview table must be specified for data preview mode")
+
+            # Verify table exists in input tables
+            try:
+                self._resolve_data_source_table_path(data_preview_table)
+            except UserException:
+                raise  # Re-raise with original message
+
+        # Validate custom link configuration
+        if self.cfg.advanced_options.include_custom_link:
+            custom_link_url = self.cfg.advanced_options.custom_link_url.strip()
+
+            # Check if {table_id} placeholder is used
+            if "{table_id}" in custom_link_url:
+                custom_link_table = self.cfg.advanced_options.custom_link_table
+                if not custom_link_table:
+                    raise UserException("Custom link table must be specified when using {table_id} placeholder in URL")
+
+                # Verify table exists in input mapping
+                try:
+                    next(
+                        table.source
+                        for table in self.configuration.tables_input_mapping
+                        if table.destination == custom_link_table
+                    )
+                except StopIteration:
+                    raise UserException(f"Custom link table '{custom_link_table}' not found in input mapping")
+
+            # Verify required environment variables are available
+            if not self.environment_variables.stack_id:
+                raise UserException("Stack Id not available for custom link URL resolution")
+            if not self.environment_variables.project_id:
+                raise UserException("Project Id not available for custom link URL resolution")
+            if not self.environment_variables.run_id:
+                raise UserException("Run Id not available for custom link URL resolution")
 
     def _load_stack_overrides(self) -> StackOverridesParameters:
         image_parameters = self.configuration.image_parameters or {}
