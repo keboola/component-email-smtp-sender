@@ -299,17 +299,71 @@
             }
           }
         },
+        "include_custom_link": {
+          "type": "boolean",
+          "title": "Include Custom Link",
+          "format": "checkbox",
+          "default": false,
+          "propertyOrder": 5
+        },
+        "custom_link_text": {
+          "type": "string",
+          "title": "Link Text",
+          "default": "Storage Link",
+          "propertyOrder": 6,
+          "options": {
+            "dependencies": {
+              "include_custom_link": true
+            }
+          }
+        },
+        "custom_link_url": {
+          "type": "string",
+          "title": "Link URL Template",
+          "description": "Example: <code>https://{stack}/admin/projects/{project_id}/table-preview/{table_id}?context=%2Fqueue%2F{run_id}</code>",
+          "default": "",
+          "propertyOrder": 7,
+          "options": {
+            "tooltip": "Available placeholders:\n- <code>{stack}</code> - Keboola stack hostname\n- <code>{project_id}</code> - Current project ID\n- <code>{table_id}</code> - Storage table ID (requires table selection)\n- <code>{run_id}</code> - Current job run ID",
+            "dependencies": {
+              "include_custom_link": true
+            }
+          }
+        },
+        "custom_link_table": {
+          "type": "string",
+          "title": "Table for {table_id} Placeholder",
+          "description": "Select table to use for {table_id} placeholder in URL",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 8,
+          "options": {
+            "async": {
+              "label": "Re-load tables",
+              "action": "load_input_table_selection",
+              "autoload": []
+            },
+            "dependencies": {
+              "include_custom_link": true
+            }
+          }
+        },
         "include_attachments": {
           "type": "boolean",
           "title": "Include Attachments",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 5
+          "propertyOrder": 9
         },
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 6,
+          "propertyOrder": 10,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",
@@ -421,7 +475,7 @@
           "type": "button",
           "format": "sync-action",
           "description": "Validates the whole config",
-          "propertyOrder": 9,
+          "propertyOrder": 20,
           "options": {
             "async": {
               "label": "VALIDATE CONFIG",

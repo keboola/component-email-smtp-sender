@@ -157,6 +157,10 @@ class AdvancedEmailOptions(ConfigurationBase):
     recipient_email_address_column: Union[str, None] = None
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
+    include_custom_link: bool = False
+    custom_link_text: str = "Storage Link"
+    custom_link_url: str = ""
+    custom_link_table: Union[str, None] = None
     include_attachments: bool = True
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
 

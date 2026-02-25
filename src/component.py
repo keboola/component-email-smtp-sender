@@ -151,6 +151,52 @@ class Component(ComponentBase):
                 "total_count": total_row_count,
             }
 
+        # Handle custom link
+        custom_link = None
+        if self.cfg.configuration_type == "advanced" and self.cfg.advanced_options.include_custom_link:
+            advanced_options = self.cfg.advanced_options
+            custom_link_url = advanced_options.custom_link_url.strip()
+
+            # Validate URL is not empty
+            if not custom_link_url or len(custom_link_url) < 5:
+                raise UserException("Custom link URL must be at least 5 characters long")
+
+            # Check if {table_id} placeholder is used
+            if "{table_id}" in custom_link_url:
+                custom_link_table = advanced_options.custom_link_table
+                if not custom_link_table:
+                    raise UserException("Custom link table must be specified when using {table_id} placeholder in URL")
+                # Resolve table_id from input mapping
+                try:
+                    table_id = next(
+                        table.source
+                        for table in self.configuration.tables_input_mapping
+                        if table.destination == custom_link_table
+                    )
+                except StopIteration:
+                    raise UserException(f"Custom link table '{custom_link_table}' not found in input mapping")
+            else:
+                table_id = ""
+
+            # Resolve placeholders
+            stack_id = self.environment_variables.stack_id
+            project_id = self.environment_variables.project_id
+            run_id = self.environment_variables.run_id
+
+            if not stack_id:
+                raise UserException("Stack ID not available for custom link URL resolution")
+            if not project_id:
+                raise UserException("Project ID not available for custom link URL resolution")
+            if not run_id:
+                raise UserException("Run ID not available for custom link URL resolution")
+
+            # Format URL with placeholders
+            resolved_url = custom_link_url.format(
+                stack=stack_id, project_id=project_id, table_id=table_id, run_id=run_id
+            )
+
+            custom_link = {"url": resolved_url, "text": advanced_options.custom_link_text}
+
         results_table = self.create_out_table_definition("results.csv", write_always=True)
         with open(results_table.full_path, "w", newline="") as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
@@ -160,6 +206,7 @@ class Component(ComponentBase):
                 email_data_table_path=email_data_table_path,
                 attachments_paths_by_filename=attachments_paths_by_filename,
                 preview_metadata=preview_metadata,
+                custom_link=custom_link,
             )
         self.write_manifest(results_table)
 
@@ -282,6 +329,7 @@ class Component(ComponentBase):
         attachments_paths_by_filename: Dict[str, str],
         email_data_table_path: Union[str, None] = None,
         preview_metadata: Union[Dict, None] = None,
+        custom_link: Union[Dict, None] = None,
     ) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
@@ -381,6 +429,20 @@ class Component(ComponentBase):
                     # Append to HTML if present
                     if rendered_html_message:
                         rendered_html_message = f"{rendered_html_message}\n<p>{info_text_rendered}</p>"
+
+                # Append custom link to email body if present
+                if custom_link:
+                    link_text = custom_link["text"]
+                    link_url = custom_link["url"]
+
+                    # Append to plaintext (with colon)
+                    rendered_plaintext_message = f"{rendered_plaintext_message}\n{link_text}:\n{link_url}"
+
+                    # Append to HTML if present
+                    if rendered_html_message:
+                        rendered_html_message = (
+                            f'{rendered_html_message}\n<p>{link_text} <a href="{link_url}">{link_url}</a></p>'
+                        )
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
