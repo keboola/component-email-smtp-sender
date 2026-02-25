@@ -315,10 +315,10 @@
               "title": "Attachments Source",
               "type": "string",
               "propertyOrder": 1,
-              "enum": ["from_table", "all_input_files"],
+              "enum": ["from_table", "data_preview", "all_input_files"],
               "options": {
-                "enum_titles": ["From Table", "All Input Files and Tables"],
-                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+                "enum_titles": ["From Table", "Data Preview", "All Input Files and Tables"],
+                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**Data Preview** - attach a CSV file with the first N rows from a selected input table\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
               }
             },
             "attachments_column": {
@@ -342,11 +342,66 @@
                 "dependencies": {"attachments_source":  "from_table"}
               }
             },
+            "data_preview_table": {
+              "type": "string",
+              "title": "Data Preview Table",
+              "description": "Table to use as data source for preview",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "enum": [],
+              "format": "select",
+              "uniqueItems": true,
+              "propertyOrder": 3,
+              "options": {
+                "async": {
+                  "label": "Re-load tables",
+                  "action": "load_input_table_selection",
+                  "autoload": []
+                },
+                "dependencies": {"attachments_source": "data_preview"}
+              }
+            },
+            "preview_row_limit": {
+              "type": "integer",
+              "title": "Preview Row Limit",
+              "description": "Number of rows to include in preview (1-1000)",
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000,
+              "propertyOrder": 4,
+              "options": {
+                "dependencies": {"attachments_source": "data_preview"}
+              }
+            },
+            "preview_attachment_filename": {
+              "type": "string",
+              "title": "Preview Attachment Filename",
+              "description": "Filename for the CSV preview. Use {table_name} placeholder.",
+              "default": "{table_name}_preview.csv",
+              "propertyOrder": 5,
+              "options": {
+                "dependencies": {"attachments_source": "data_preview"}
+              }
+            },
+            "preview_info_text": {
+              "type": "string",
+              "title": "Preview Info Text",
+              "description": "Text appended to email body. Use {n} for preview rows, {total} for total rows.",
+              "default": "Attachment contains {n} of {total} records.",
+              "format": "textarea",
+              "propertyOrder": 6,
+              "options": {
+                "input_height": "100px",
+                "dependencies": {"attachments_source": "data_preview"}
+              }
+            },
             "validate_attachments": {
               "type": "button",
               "format": "sync-action",
               "description": "Validates All attachments are present in file input mapping (excluding the template files)",
-              "propertyOrder": 3,
+              "propertyOrder": 7,
               "options": {
                 "async": {
                   "label": "VALIDATE ATTACHMENTS",

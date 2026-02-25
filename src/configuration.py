@@ -140,10 +140,15 @@ class AttachmentsConfig(ConfigurationBase):
     attachments_source:
     "all_input_files"
     "from_table" -> "attachments_column"
+    "data_preview" -> "data_preview_table", "preview_row_limit", "preview_attachment_filename", "preview_info_text"
     """
 
     attachments_source: Union[str, None] = None
     attachments_column: Union[str, None] = None
+    data_preview_table: Union[str, None] = None
+    preview_row_limit: int = 100
+    preview_attachment_filename: str = "{table_name}_preview.csv"
+    preview_info_text: str = "Attachment contains {n} of {total} records."
 
 
 @dataclass

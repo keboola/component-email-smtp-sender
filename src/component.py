@@ -99,13 +99,52 @@ class Component(ComponentBase):
         except Exception as e:
             raise UserException(f"Error loading attachments: {str(e)}")
 
+        # Handle data preview attachment mode
+        preview_metadata = None
+        if (
+            self.cfg.configuration_type == "advanced"
+            and self.cfg.advanced_options.include_attachments
+            and self.cfg.advanced_options.attachments_config.attachments_source == "data_preview"
+        ):
+            attachments_config = self.cfg.advanced_options.attachments_config
+            data_preview_table = attachments_config.data_preview_table
+
+            if not data_preview_table:
+                raise UserException("Data preview table must be specified for data preview mode")
+
+            # Resolve table
+            table_id, table_path = self._resolve_data_source_table_path(data_preview_table)
+
+            # Count total rows in CSV file
+            total_row_count = self._count_csv_rows(table_path)
+
+            # Generate preview CSV
+            preview_file_path, actual_row_count = self._generate_data_preview(
+                table_path=table_path,
+                row_limit=attachments_config.preview_row_limit,
+                filename_template=attachments_config.preview_attachment_filename,
+                table_name=data_preview_table,
+            )
+
+            # Override attachments with preview file only
+            attachments_paths_by_filename = {os.path.basename(preview_file_path): preview_file_path}
+
+            # Store preview metadata for send_emails
+            preview_metadata = {
+                "info_text": attachments_config.preview_info_text,
+                "row_count": actual_row_count,
+                "total_count": total_row_count,
+            }
+
         results_table = self.create_out_table_definition("results.csv", write_always=True)
         with open(results_table.full_path, "w", newline="") as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
             self._results_writer.errors = False
             self.send_emails(
-                email_data_table_path=email_data_table_path, attachments_paths_by_filename=attachments_paths_by_filename
+                email_data_table_path=email_data_table_path,
+                attachments_paths_by_filename=attachments_paths_by_filename,
+                preview_metadata=preview_metadata,
             )
         self.write_manifest(results_table)
 
@@ -218,7 +257,10 @@ class Component(ComponentBase):
         return {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
 
     def send_emails(
-        self, attachments_paths_by_filename: Dict[str, str], email_data_table_path: Union[str, None] = None
+        self,
+        attachments_paths_by_filename: Dict[str, str],
+        email_data_table_path: Union[str, None] = None,
+        preview_metadata: Union[Dict, None] = None,
     ) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
@@ -232,7 +274,6 @@ class Component(ComponentBase):
         subject_column = None
         plaintext_template_column = None
         html_template_column = None
-        all_attachments = attachments_config.attachments_source == "all_input_files"
         attachments_column = attachments_config.attachments_column
 
         if email_data_table_path:
@@ -298,11 +339,27 @@ class Component(ComponentBase):
 
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
                     if self.cfg.advanced_options.include_attachments and not self._client.disable_attachments:
-                        if not all_attachments:
+                        # Only "from_table" mode needs per-row attachment loading from CSV column;
+                        # other modes (all_input_files, data_preview) use the same attachments for all recipients
+                        if attachments_config.attachments_source == "from_table":
                             custom_attachments_paths_by_filename = {
                                 attachment_filename: attachments_paths_by_filename[attachment_filename]
                                 for attachment_filename in json.loads(row[attachments_column])
                             }
+
+                # Append preview info text to email body if present
+                if preview_metadata and not self._client.disable_attachments:
+                    info_text_rendered = preview_metadata["info_text"].format(
+                        n=preview_metadata["row_count"],
+                        total=preview_metadata["total_count"],
+                    )
+
+                    # Append to plaintext
+                    rendered_plaintext_message = f"{rendered_plaintext_message}\n{info_text_rendered}"
+
+                    # Append to HTML if present
+                    if rendered_html_message:
+                        rendered_html_message = f"{rendered_html_message}\n<p>{info_text_rendered}</p>"
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
@@ -438,6 +495,79 @@ class Component(ComponentBase):
             )
         return attachments_filenames
 
+    def _resolve_data_source_table_path(self, table_destination: str) -> Tuple[str, str]:
+        """
+        Resolves data source table destination name to (table_id, local_file_path).
+
+        Args:
+            table_destination: Table destination name from config (e.g., "email_data")
+
+        Returns:
+            Tuple of (storage_table_id, local_csv_path)
+
+        Raises:
+            UserException: If table not found in input mapping
+        """
+        try:
+            table_mapping = next(
+                table for table in self.configuration.tables_input_mapping if table.destination == table_destination
+            )
+            table_id = table_mapping.source
+            in_tables = self.get_input_tables_definitions()
+            table_path = next(in_table.full_path for in_table in in_tables if in_table.name == table_destination)
+            return table_id, table_path
+        except StopIteration:
+            raise UserException(f"Data source table '{table_destination}' not found in input mapping")
+
+    def _count_csv_rows(self, csv_path: str) -> int:
+        """
+        Counts data rows in CSV file (excluding header).
+
+        Args:
+            csv_path: Path to CSV file
+
+        Returns:
+            Number of data rows (header not counted)
+        """
+        with open(csv_path, encoding="utf-8") as f:
+            return sum(1 for _ in f) - 1
+
+    def _generate_data_preview(
+        self, table_path: str, row_limit: int, filename_template: str, table_name: str
+    ) -> Tuple[str, int]:
+        """
+        Generates a CSV preview file with first N rows.
+
+        Args:
+            table_path: Path to source CSV file
+            row_limit: Maximum number of rows to include
+            filename_template: Filename template with {table_name} placeholder
+            table_name: Table name for filename substitution
+
+        Returns:
+            Tuple of (preview_file_path, actual_row_count)
+        """
+        filename = filename_template.replace("{table_name}", table_name)
+        preview_path = os.path.join(self.data_folder_path, filename)
+
+        with open(table_path, encoding="utf-8") as source:
+            reader = csv.reader(source)
+            header = next(reader, None)
+
+            with open(preview_path, "w", encoding="utf-8", newline="") as dest:
+                writer = csv.writer(dest)
+                if header:
+                    writer.writerow(header)
+
+                row_count = 0
+                for row in reader:
+                    if row_count >= row_limit:
+                        break
+                    writer.writerow(row)
+                    row_count += 1
+
+        return preview_path, row_count
+
     def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
         unique_placeholders = set()
         for row in reader:
@@ -539,8 +669,25 @@ class Component(ComponentBase):
                 return self._validate_templates_from_table(reader, plaintext)
         else:
             template_text = self._read_template_text(plaintext)
+
+            # Parse placeholders first
+            template_placeholders = self._parse_template_placeholders(template_text)
+
+            # If no placeholders, validation passes immediately
+            if not template_placeholders:
+                return ValidationResult(valid_message, MessageType.SUCCESS)
+
+            # Load columns only if we have placeholders to validate
+            columns = self.load_input_table_columns_()
+
+            # If loading failed, we can't validate - return error (strict)
+            if isinstance(columns, ValidationResult):
+                return ValidationResult(
+                    "❌ - Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
+                )
+
+            # Validate placeholders against columns
             try:
-                columns = self.load_input_table_columns_()
                 self._validate_template_text(template_text, columns)
                 return ValidationResult(valid_message, MessageType.SUCCESS)
             except UserException as e:
@@ -598,7 +745,6 @@ class Component(ComponentBase):
     def validate_subject_(self) -> ValidationResult:
         self._init_configuration()
         subject_config = self.cfg.advanced_options.subject_config
-        message = VALID_SUBJECT_MESSAGE
         if subject_config.subject_source == "from_table":
             subject_column = subject_config.subject_column
             table_name = self.cfg.advanced_options.email_data_table_name
@@ -608,15 +754,33 @@ class Component(ComponentBase):
                 missing_columns = self._get_missing_columns_from_table(reader, subject_column)
                 if missing_columns:
                     message = "❌ - Missing columns: " + ", ".join(missing_columns)
+                    return ValidationResult(message, MessageType.DANGER)
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
         else:
             subject_template_text = subject_config.subject_template_definition
+
+            # Parse placeholders first
+            template_placeholders = self._parse_template_placeholders(subject_template_text)
+
+            # If no placeholders, validation passes immediately
+            if not template_placeholders:
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+
+            # Load columns only if we have placeholders to validate
             columns = self.load_input_table_columns_()
+
+            # If loading failed, we can't validate - return error (strict)
+            if isinstance(columns, ValidationResult):
+                return ValidationResult(
+                    "❌ - Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
+                )
+
+            # Validate placeholders against columns
             try:
                 self._validate_template_text(subject_template_text, columns)
-            except Exception as e:
-                message = str(e)
-        message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
-        return ValidationResult(message, message_type)
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+            except UserException as e:
+                return ValidationResult(str(e), MessageType.DANGER)
 
     @sync_action("validate_subject")
     def validate_subject(self) -> ValidationResult:
@@ -672,7 +836,11 @@ class Component(ComponentBase):
 
         image_parameters = self.configuration.image_parameters or {}
         disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
-        if self.cfg.advanced_options.include_attachments and not disable_attachments:
+        if (
+            self.cfg.advanced_options.include_attachments
+            and not disable_attachments
+            and self.cfg.advanced_options.attachments_config.attachments_source != "data_preview"
+        ):
             validation_methods.append(self.validate_attachments_)
 
         messages = [validation_method().message for validation_method in validation_methods]
