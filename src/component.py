@@ -112,11 +112,26 @@ class Component(ComponentBase):
             if not data_preview_table:
                 raise UserException("Data preview table must be specified for data preview mode")
 
-            # Resolve table
-            table_id, table_path = self._resolve_data_source_table_path(data_preview_table)
+            # Resolve table path and table_id from input mapping
+            table_path = self._resolve_data_source_table_path(data_preview_table)
+            table_id = next(
+                table.source
+                for table in self.configuration.tables_input_mapping
+                if table.destination == data_preview_table
+            )
 
-            # Count total rows in CSV file
-            total_row_count = self._count_csv_rows(table_path)
+            # Get total row count - prefer Storage API, fallback to local CSV
+            try:
+                storage_client = self._init_storage_client()
+                table_detail = storage_client.tables.detail(table_id)
+                total_row_count = table_detail["rowsCount"]
+                logging.info(f"Data preview: using Storage API row count ({total_row_count} rows)")
+            except Exception as e:
+                logging.warning(
+                    f"Data preview: Storage API unavailable ({str(e)}), "
+                    f"falling back to local CSV row count (may be inaccurate if input mapping uses limit/filters)"
+                )
+                total_row_count = self._count_csv_rows(table_path)
 
             # Generate preview CSV
             preview_file_path, actual_row_count = self._generate_data_preview(
@@ -227,14 +242,20 @@ class Component(ComponentBase):
     @staticmethod
     def load_email_data_table_path(in_tables, email_data_table_name):
         try:
-            table_path = next(in_table.full_path for in_table in in_tables if in_table.name == email_data_table_name)
+            table_path = next(
+                in_table.full_path for in_table in in_tables if Path(in_table.full_path).name == email_data_table_name
+            )
         except StopIteration:
             table_path = None
         return table_path
 
     @staticmethod
     def _load_attachment_tables(in_tables, table_to_exclude):
-        tables = {in_table.name: in_table.full_path for in_table in in_tables if in_table.name != table_to_exclude}
+        tables = {
+            Path(in_table.full_path).name: in_table.full_path
+            for in_table in in_tables
+            if Path(in_table.full_path).name != table_to_exclude
+        }
         return tables
 
     def _load_attachment_files(self, in_files_by_name):
@@ -495,29 +516,29 @@ class Component(ComponentBase):
             )
         return attachments_filenames
 
-    def _resolve_data_source_table_path(self, table_destination: str) -> Tuple[str, str]:
+    def _resolve_data_source_table_path(self, table_destination: str) -> str:
         """
-        Resolves data source table destination name to (table_id, local_file_path).
+        Resolves data source table destination name to local file path.
 
         Args:
-            table_destination: Table destination name from config (e.g., "email_data")
+            table_destination: Table destination name from config (e.g., "email_export.csv")
 
         Returns:
-            Tuple of (storage_table_id, local_csv_path)
+            Local CSV file path
 
         Raises:
-            UserException: If table not found in input mapping
+            UserException: If table not found in input tables
         """
+        in_tables = self.get_input_tables_definitions()
         try:
-            table_mapping = next(
-                table for table in self.configuration.tables_input_mapping if table.destination == table_destination
+            return next(
+                in_table.full_path for in_table in in_tables if Path(in_table.full_path).name == table_destination
             )
-            table_id = table_mapping.source
-            in_tables = self.get_input_tables_definitions()
-            table_path = next(in_table.full_path for in_table in in_tables if in_table.name == table_destination)
-            return table_id, table_path
         except StopIteration:
-            raise UserException(f"Data source table '{table_destination}' not found in input mapping")
+            available = [Path(t.full_path).name for t in in_tables]
+            raise UserException(
+                f"Data source table '{table_destination}' not found in input tables. Available: {available}"
+            )
 
     def _count_csv_rows(self, csv_path: str) -> int:
         """
@@ -530,7 +551,7 @@ class Component(ComponentBase):
             Number of data rows (header not counted)
         """
         with open(csv_path, encoding="utf-8") as f:
-            return sum(1 for _ in f) - 1
+            return max(0, sum(1 for _ in f) - 1)
 
     def _generate_data_preview(
         self, table_path: str, row_limit: int, filename_template: str, table_name: str
