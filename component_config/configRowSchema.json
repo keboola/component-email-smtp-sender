@@ -299,80 +299,26 @@
             }
           }
         },
-        "include_custom_link": {
-          "type": "boolean",
-          "title": "Include Custom Link",
-          "format": "checkbox",
-          "default": false,
-          "propertyOrder": 5
-        },
-        "custom_link_text": {
-          "type": "string",
-          "title": "Link Text",
-          "default": "Storage Link",
-          "propertyOrder": 6,
-          "options": {
-            "dependencies": {
-              "include_custom_link": true
-            }
-          }
-        },
-        "custom_link_url": {
-          "type": "string",
-          "title": "Link URL Template",
-          "description": "Example: <code>https://{stack}/admin/projects/{project_id}/table-preview/{table_id}?context=%2Fqueue%2F{run_id}</code>",
-          "default": "",
-          "propertyOrder": 7,
-          "options": {
-            "tooltip": "Available placeholders:\n- <code>{stack}</code> - Keboola stack hostname\n- <code>{project_id}</code> - Current project ID\n- <code>{table_id}</code> - Storage table ID (requires table selection)\n- <code>{run_id}</code> - Current job run ID",
-            "dependencies": {
-              "include_custom_link": true
-            }
-          }
-        },
-        "custom_link_table": {
-          "type": "string",
-          "title": "Table for {table_id} Placeholder",
-          "description": "Select table to use for {table_id} placeholder in URL",
-          "items": {
-            "enum": [],
-            "type": "string"
-          },
-          "enum": [],
-          "format": "select",
-          "uniqueItems": true,
-          "propertyOrder": 8,
-          "options": {
-            "async": {
-              "label": "Re-load tables",
-              "action": "load_input_table_selection",
-              "autoload": []
-            },
-            "dependencies": {
-              "include_custom_link": true
-            }
-          }
-        },
         "include_attachments": {
           "type": "boolean",
           "title": "Include Attachments",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 9
+          "propertyOrder": 5
         },
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
-          "propertyOrder": 10,
+          "propertyOrder": 6,
           "properties": {
             "attachments_source": {
               "title": "Attachments Source",
               "type": "string",
               "propertyOrder": 1,
-              "enum": ["from_table", "data_preview", "all_input_files"],
+              "enum": ["from_table", "single_table", "all_input_files"],
               "options": {
-                "enum_titles": ["From Table", "Data Preview", "All Input Files and Tables"],
-                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**Data Preview** - attach a CSV file with the first N rows from a selected input table\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+                "enum_titles": ["Table Column", "Single Input Table", "All Input Files and Tables"],
+                "tooltip": "**Table Column** - each recipient gets specific attachments defined in a column (JSON list of filenames)\n- example: personalized attachments per recipient\n\n**Single Input Table** - attach a CSV sample and/or link to a selected input table\n- example: send preview of processed data or link to full table in Storage\n\n**All Input Files** - all recipients receive all non-template files in the input mapping"
               }
             },
             "attachments_column": {
@@ -396,10 +342,10 @@
                 "dependencies": {"attachments_source":  "from_table"}
               }
             },
-            "data_preview_table": {
+            "source_table": {
               "type": "string",
-              "title": "Data Preview Table",
-              "description": "Table to use as data source for preview",
+              "title": "Source Table",
+              "description": "Input table to use as data source",
               "items": {
                 "enum": [],
                 "type": "string"
@@ -414,48 +360,111 @@
                   "action": "load_input_table_selection",
                   "autoload": []
                 },
-                "dependencies": {"attachments_source": "data_preview"}
+                "dependencies": {"attachments_source": "single_table"}
               }
             },
-            "preview_row_limit": {
+            "include_csv_sample": {
+              "type": "boolean",
+              "title": "Include CSV Sample",
+              "description": "Attach a CSV file with the first N rows from the source table",
+              "format": "checkbox",
+              "default": true,
+              "propertyOrder": 4,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"}
+              }
+            },
+            "sample_row_limit": {
               "type": "integer",
-              "title": "Preview Row Limit",
-              "description": "Number of rows to include in preview (1-1000)",
+              "title": "Sample Row Limit",
+              "description": "Number of rows to include in sample (1-1000)",
               "default": 100,
               "minimum": 1,
               "maximum": 1000,
-              "propertyOrder": 4,
-              "options": {
-                "dependencies": {"attachments_source": "data_preview"}
-              }
-            },
-            "preview_attachment_filename": {
-              "type": "string",
-              "title": "Preview Attachment Filename",
-              "description": "Filename for the CSV preview. Use {table_name} placeholder.",
-              "default": "{table_name}_preview.csv",
               "propertyOrder": 5,
               "options": {
-                "dependencies": {"attachments_source": "data_preview"}
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
               }
             },
-            "preview_info_text": {
-              "type": "string",
-              "title": "Preview Info Text",
-              "description": "Text appended to email body. Use {n} for preview rows, {total} for total rows.",
-              "default": "Attachment contains {n} of {total} records.",
-              "format": "textarea",
+            "sample_sort_enabled": {
+              "type": "boolean",
+              "title": "Sort Sample",
+              "format": "checkbox",
+              "default": false,
               "propertyOrder": 6,
               "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
+              }
+            },
+            "sample_sort_column": {
+              "type": "string",
+              "title": "Sort by Column",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "enum": [],
+              "format": "select",
+              "uniqueItems": true,
+              "propertyOrder": 7,
+              "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_source_table_columns",
+                  "autoload": ["parameters.advanced_options.attachments_config.source_table"]
+                },
+                "dependencies": {"include_csv_sample": true, "sample_sort_enabled": true}
+              }
+            },
+            "sample_sort_order": {
+              "type": "string",
+              "title": "Sort Order",
+              "enum": ["asc", "desc"],
+              "default": "asc",
+              "propertyOrder": 8,
+              "options": {
+                "enum_titles": ["Ascending", "Descending"],
+                "dependencies": {"include_csv_sample": true, "sample_sort_enabled": true}
+              }
+            },
+            "sample_attachment_filename": {
+              "type": "string",
+              "title": "Sample Attachment Filename",
+              "description": "Filename for the CSV sample. Use {table_name} placeholder.",
+              "default": "{table_name}_sample.csv",
+              "propertyOrder": 9,
+              "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
+              }
+            },
+            "sample_info_text": {
+              "type": "string",
+              "title": "Sample Info Text",
+              "description": "Text appended to email body. Use {n} for sample rows, {total} for total rows.",
+              "default": "Attachment contains {n} of {total} records.",
+              "format": "textarea",
+              "propertyOrder": 10,
+              "options": {
                 "input_height": "100px",
-                "dependencies": {"attachments_source": "data_preview"}
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
+              }
+            },
+            "include_snapshot_link": {
+              "type": "boolean",
+              "title": "Include Link to Table Snapshot",
+              "description": "Appends a link to view the full table data as captured at the time of this job run",
+              "format": "checkbox",
+              "default": false,
+              "propertyOrder": 11,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"}
               }
             },
             "validate_attachments": {
               "type": "button",
               "format": "sync-action",
               "description": "Validates All attachments are present in file input mapping (excluding the template files)",
-              "propertyOrder": 7,
+              "propertyOrder": 12,
               "options": {
                 "async": {
                   "label": "VALIDATE ATTACHMENTS",

@@ -140,15 +140,22 @@ class AttachmentsConfig(ConfigurationBase):
     attachments_source:
     "all_input_files"
     "from_table" -> "attachments_column"
-    "data_preview" -> "data_preview_table", "preview_row_limit", "preview_attachment_filename", "preview_info_text"
+    "single_table" -> "source_table", "include_csv_sample", "sample_row_limit", "sample_attachment_filename",
+                      "sample_info_text", "sample_sort_enabled", "sample_sort_column", "sample_sort_order",
+                      "include_snapshot_link"
     """
 
     attachments_source: Union[str, None] = None
     attachments_column: Union[str, None] = None
-    data_preview_table: Union[str, None] = None
-    preview_row_limit: int = 100
-    preview_attachment_filename: str = "{table_name}_preview.csv"
-    preview_info_text: str = "Attachment contains {n} of {total} records."
+    source_table: Union[str, None] = None
+    include_csv_sample: bool = True
+    sample_row_limit: int = 100
+    sample_attachment_filename: str = "{table_name}_sample.csv"
+    sample_info_text: str = "Attachment contains {n} of {total} records."
+    sample_sort_enabled: bool = False
+    sample_sort_column: Union[str, None] = None
+    sample_sort_order: str = "asc"
+    include_snapshot_link: bool = False
 
 
 @dataclass
@@ -157,10 +164,6 @@ class AdvancedEmailOptions(ConfigurationBase):
     recipient_email_address_column: Union[str, None] = None
     subject_config: SubjectConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
     message_body_config: MessageBodyConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
-    include_custom_link: bool = False
-    custom_link_text: str = "Storage Link"
-    custom_link_url: str = ""
-    custom_link_table: Union[str, None] = None
     include_attachments: bool = True
     attachments_config: AttachmentsConfig = dataclasses.field(default_factory=lambda: ConfigTree({}))
 

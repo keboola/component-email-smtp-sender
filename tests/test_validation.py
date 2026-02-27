@@ -2,10 +2,11 @@
 Comprehensive test suite for configuration validation in Component.
 
 Tests cover:
-- _validate_run_configuration() method (to be implemented)
+- _validate_run_configuration() method
 - _resolve_data_source_table_path() method
 - load_email_data_table_path() method
 - _load_attachment_tables() method
+- validate_single_table_() sync action method
 """
 
 from unittest.mock import MagicMock, PropertyMock, patch
@@ -68,32 +69,23 @@ def component(mock_environment, mock_tables_mapping, mock_input_tables):
     - Mocked tables_input_mapping
     - Mocked get_input_tables_definitions()
     """
-    with patch("component.ComponentBase.__init__", return_value=None):
-        comp = Component()
+    comp = Component.__new__(Component)
+    comp.cfg = Configuration.load_from_dict(make_advanced_config())
 
-        # Set up valid default configuration
-        comp.cfg = Configuration.load_from_dict(make_advanced_config())
+    mock_config = MagicMock()
+    mock_config.tables_input_mapping = mock_tables_mapping
+    mock_config.parameters = make_advanced_config()
 
-        # Mock configuration property (read-only, needs PropertyMock)
-        mock_config = MagicMock()
-        mock_config.tables_input_mapping = mock_tables_mapping
-        mock_config.parameters = make_advanced_config()
+    with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+        mock_conf_prop.return_value = mock_config
+        comp._configuration_mock = mock_conf_prop
 
-        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
-            mock_conf_prop.return_value = mock_config
-            comp._configuration_mock = mock_conf_prop  # Keep reference
+        comp.environment_variables = mock_environment
+        comp.get_input_tables_definitions = MagicMock(return_value=mock_input_tables)
+        comp._init_storage_client = MagicMock()
+        comp._count_csv_rows = MagicMock(return_value=100)
 
-            # Mock environment variables
-            comp.environment_variables = mock_environment
-
-            # Mock get_input_tables_definitions()
-            comp.get_input_tables_definitions = MagicMock(return_value=mock_input_tables)
-
-            # Mock other required methods
-            comp._init_storage_client = MagicMock()
-            comp._count_csv_rows = MagicMock(return_value=100)
-
-            yield comp
+        yield comp
 
 
 def make_advanced_config(**overrides) -> dict:
@@ -128,10 +120,6 @@ def make_advanced_config(**overrides) -> dict:
                 "use_html_template": False,
                 "plaintext_template_definition": "Test Body",
             },
-            "include_custom_link": False,
-            "custom_link_text": "Storage Link",
-            "custom_link_url": "",
-            "custom_link_table": None,
             "include_attachments": True,
             "attachments_config": {
                 "attachments_source": "all_input_files",
@@ -173,29 +161,29 @@ class TestValidateRunConfiguration:
 
     # Data Preview Validation
 
-    def test_data_preview_missing_table(self, component):
-        """Data preview mode without table specified should raise."""
+    def test_single_table_missing_source_table(self, component):
+        """Single table mode without source table specified should raise."""
         component.cfg = Configuration.load_from_dict(
             make_advanced_config(
                 advanced_options={
                     "attachments_config": {
-                        "attachments_source": "data_preview",
-                        "data_preview_table": None,
+                        "attachments_source": "single_table",
+                        "source_table": None,
                     }
                 }
             )
         )
-        with pytest.raises(UserException, match="Data preview table must be specified"):
+        with pytest.raises(UserException, match="Source table must be specified"):
             component._validate_run_configuration()
 
-    def test_data_preview_table_not_in_input_tables(self, component):
-        """Data preview table not found in input tables should raise."""
+    def test_single_table_source_table_not_found(self, component):
+        """Single table mode with non-existent source table should raise."""
         component.cfg = Configuration.load_from_dict(
             make_advanced_config(
                 advanced_options={
                     "attachments_config": {
-                        "attachments_source": "data_preview",
-                        "data_preview_table": "nonexistent.csv",
+                        "attachments_source": "single_table",
+                        "source_table": "nonexistent.csv",
                     }
                 }
             )
@@ -203,14 +191,67 @@ class TestValidateRunConfiguration:
         with pytest.raises(UserException, match="not found in input tables"):
             component._validate_run_configuration()
 
-    def test_data_preview_valid(self, component):
-        """Valid data preview configuration should not raise."""
+    def test_single_table_neither_toggle_enabled(self, component):
+        """Single table mode with neither CSV sample nor snapshot link enabled should raise."""
         component.cfg = Configuration.load_from_dict(
             make_advanced_config(
                 advanced_options={
                     "attachments_config": {
-                        "attachments_source": "data_preview",
-                        "data_preview_table": "email_export.csv",
+                        "attachments_source": "single_table",
+                        "source_table": "email_export.csv",
+                        "include_csv_sample": False,
+                        "include_snapshot_link": False,
+                    }
+                }
+            )
+        )
+        with pytest.raises(UserException, match="At least one option must be enabled"):
+            component._validate_run_configuration()
+
+    def test_single_table_with_csv_sample_only(self, component):
+        """Single table mode with only CSV sample enabled should pass."""
+        component.cfg = Configuration.load_from_dict(
+            make_advanced_config(
+                advanced_options={
+                    "attachments_config": {
+                        "attachments_source": "single_table",
+                        "source_table": "email_export.csv",
+                        "include_csv_sample": True,
+                        "include_snapshot_link": False,
+                    }
+                }
+            )
+        )
+        # Should not raise
+        component._validate_run_configuration()
+
+    def test_single_table_with_snapshot_link_only(self, component):
+        """Single table mode with only snapshot link enabled should pass."""
+        component.cfg = Configuration.load_from_dict(
+            make_advanced_config(
+                advanced_options={
+                    "attachments_config": {
+                        "attachments_source": "single_table",
+                        "source_table": "email_export.csv",
+                        "include_csv_sample": False,
+                        "include_snapshot_link": True,
+                    }
+                }
+            )
+        )
+        # Should not raise
+        component._validate_run_configuration()
+
+    def test_single_table_with_both_toggles(self, component):
+        """Single table mode with both CSV sample and snapshot link enabled should pass."""
+        component.cfg = Configuration.load_from_dict(
+            make_advanced_config(
+                advanced_options={
+                    "attachments_config": {
+                        "attachments_source": "single_table",
+                        "source_table": "email_export.csv",
+                        "include_csv_sample": True,
+                        "include_snapshot_link": True,
                     }
                 }
             )
@@ -232,134 +273,21 @@ class TestValidateRunConfiguration:
         # Should not raise even without data_preview_table
         component._validate_run_configuration()
 
-    # Custom Link Validation
-
-    def test_custom_link_disabled_skips_validation(self, component):
-        """Custom link disabled should skip validation."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(advanced_options={"include_custom_link": False})
-        )
-        # Should not raise
-        component._validate_run_configuration()
-
-    def test_custom_link_table_id_placeholder_without_table(self, component):
-        """Custom link with {table_id} but no table specified should raise."""
+    def test_unknown_attachments_source(self, component):
+        """Unknown attachment source value (e.g., legacy 'data_preview') should raise clear error."""
         component.cfg = Configuration.load_from_dict(
             make_advanced_config(
                 advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}/table/{table_id}",
-                    "custom_link_table": None,
-                }
-            )
-        )
-        with pytest.raises(UserException, match="Custom link table must be specified.*{table_id}"):
-            component._validate_run_configuration()
-
-    def test_custom_link_table_not_in_mapping(self, component):
-        """Custom link table not found in input mapping should raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}/table/{table_id}",
-                    "custom_link_table": "nonexistent.csv",
-                }
-            )
-        )
-        with pytest.raises(UserException, match="not found in input mapping"):
-            component._validate_run_configuration()
-
-    @pytest.mark.parametrize("missing_var", ["stack_id", "project_id", "run_id"])
-    def test_custom_link_missing_env_var(self, component, missing_var):
-        """Custom link with missing environment variable should raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}",
-                }
-            )
-        )
-        setattr(component.environment_variables, missing_var, "")
-        with pytest.raises(UserException, match=f"{missing_var.replace('_', ' ').title()}.*not available"):
-            component._validate_run_configuration()
-
-    def test_custom_link_valid_with_table_id(self, component):
-        """Valid custom link with {table_id} placeholder should not raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}/table/{table_id}",
-                    "custom_link_table": "email_export.csv",
-                }
-            )
-        )
-        # Should not raise
-        component._validate_run_configuration()
-
-    def test_custom_link_valid_without_table_id(self, component):
-        """Valid custom link without {table_id} placeholder should not raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}/overview",
-                }
-            )
-        )
-        # Should not raise (no custom_link_table needed)
-        component._validate_run_configuration()
-
-    def test_custom_link_static_url(self, component):
-        """Custom link with static URL (no placeholders) should not raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://example.com/static-page",
-                }
-            )
-        )
-        # Should not raise
-        component._validate_run_configuration()
-
-    # Combined Scenarios
-
-    def test_both_features_valid(self, component):
-        """Both data preview and custom link enabled with valid config should not raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}",
                     "attachments_config": {
-                        "attachments_source": "data_preview",
-                        "data_preview_table": "email_export.csv",
-                    },
+                        "attachments_source": "data_preview",  # Legacy value
+                    }
                 }
             )
         )
-        # Should not raise
-        component._validate_run_configuration()
-
-    def test_data_preview_valid_custom_link_invalid(self, component):
-        """Data preview valid but custom link invalid should raise."""
-        component.cfg = Configuration.load_from_dict(
-            make_advanced_config(
-                advanced_options={
-                    "include_custom_link": True,
-                    "custom_link_url": "https://{stack}/admin/projects/{project_id}/table/{table_id}",
-                    "custom_link_table": "nonexistent.csv",  # Invalid
-                    "attachments_config": {
-                        "attachments_source": "data_preview",
-                        "data_preview_table": "email_export.csv",  # Valid
-                    },
-                }
-            )
-        )
-        with pytest.raises(UserException, match="not found in input mapping"):
+        with pytest.raises(
+            UserException,
+            match="Unknown attachment source: 'data_preview'. Valid options: 'from_table', 'single_table', 'all_input_files'",
+        ):
             component._validate_run_configuration()
 
 
@@ -442,3 +370,167 @@ class TestLoadAttachmentTables:
         assert "email_export.csv" in result
         # Verify the values are the full paths
         assert result["email_basis.csv"] == "/data/in/tables/email_basis.csv"
+
+
+# ==================== Tests for validate_single_table_() Sync Action ====================
+
+
+class TestValidateSingleTableSyncAction:
+    """Tests for the validate_single_table_() sync action helper method."""
+
+    @pytest.fixture
+    def base_config(self):
+        """Base configuration for sync action tests."""
+        return {
+            "smtp_server_config": {
+                "host": "smtp.example.com",
+                "port": 587,
+                "use_tls": True,
+                "sender_email_address": "sender@example.com",
+                "password": "#password",
+            },
+            "email_data_table_name": "email_basis.csv",
+            "subject": "Test Subject",
+            "plaintext_body": "Test body",
+            "advanced_options": {
+                "include_attachments": True,
+                "attachments_config": {
+                    "attachments_source": "single_table",
+                    "source_table": None,
+                    "include_csv_sample": False,
+                    "include_snapshot_link": False,
+                },
+            },
+        }
+
+    def test_missing_source_table(self, base_config, mock_tables_mapping):
+        """Should return error when source_table is not set."""
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "❌ Source table must be specified for single table mode" in result.message
+        assert result.type.name == "ERROR"
+
+    def test_source_table_not_found(self, base_config, mock_tables_mapping):
+        """Should return error when source_table doesn't exist in input tables."""
+        base_config["advanced_options"]["attachments_config"]["source_table"] = "nonexistent.csv"
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = True
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "❌" in result.message
+        assert "nonexistent.csv" in result.message
+        assert result.type.name == "ERROR"
+
+    def test_neither_toggle_enabled(self, base_config, mock_tables_mapping):
+        """Should return error when both include_csv_sample and include_snapshot_link are False."""
+        base_config["advanced_options"]["attachments_config"]["source_table"] = "email_basis.csv"
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = False
+        base_config["advanced_options"]["attachments_config"]["include_snapshot_link"] = False
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "❌ At least one option must be enabled" in result.message
+        assert result.type.name == "ERROR"
+
+    def test_multiple_errors_shown_together(self, base_config, mock_tables_mapping):
+        """Should show all errors at once (not fail-fast)."""
+        # Missing source_table AND neither toggle enabled
+        base_config["advanced_options"]["attachments_config"]["source_table"] = None
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = False
+        base_config["advanced_options"]["attachments_config"]["include_snapshot_link"] = False
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        # Both errors should be present
+        assert "❌ Source table must be specified for single table mode" in result.message
+        assert "❌ At least one option must be enabled" in result.message
+        assert result.type.name == "ERROR"
+
+    def test_csv_sample_only_valid(self, base_config, mock_tables_mapping):
+        """Should succeed when only include_csv_sample is enabled."""
+        base_config["advanced_options"]["attachments_config"]["source_table"] = "email_basis.csv"
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = True
+        base_config["advanced_options"]["attachments_config"]["include_snapshot_link"] = False
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "✅" in result.message
+        assert result.type.name == "SUCCESS"
+
+    def test_snapshot_link_only_valid(self, base_config, mock_tables_mapping):
+        """Should succeed when only include_snapshot_link is enabled."""
+        base_config["advanced_options"]["attachments_config"]["source_table"] = "email_basis.csv"
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = False
+        base_config["advanced_options"]["attachments_config"]["include_snapshot_link"] = True
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "✅" in result.message
+        assert result.type.name == "SUCCESS"
+
+    def test_both_toggles_enabled_valid(self, base_config, mock_tables_mapping):
+        """Should succeed when both toggles are enabled."""
+        base_config["advanced_options"]["attachments_config"]["source_table"] = "email_basis.csv"
+        base_config["advanced_options"]["attachments_config"]["include_csv_sample"] = True
+        base_config["advanced_options"]["attachments_config"]["include_snapshot_link"] = True
+
+        comp = Component.__new__(Component)
+        comp.cfg = Configuration.load_from_dict(base_config)
+        mock_config = MagicMock()
+        mock_config.parameters = base_config
+        mock_config.tables_input_mapping = mock_tables_mapping
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            result = comp.validate_single_table_()
+
+        assert "✅" in result.message
+        assert result.type.name == "SUCCESS"
