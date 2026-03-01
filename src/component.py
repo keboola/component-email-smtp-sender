@@ -116,11 +116,13 @@ class Component(ComponentBase):
                 table.source for table in self.configuration.tables_input_mapping if table.destination == source_table
             )
 
+            # Initialize storage client once for both CSV sample and snapshot link
+            storage_client = self._init_storage_client()
+
             # Handle CSV sample generation
             if attachments_config.include_csv_sample:
                 # Get total row count - prefer Storage API, fallback to local CSV
                 try:
-                    storage_client = self._init_storage_client()
                     table_detail = storage_client.tables.detail(table_id)
                     total_row_count = table_detail["rowsCount"]
                     logging.info(f"Table sample: using Storage API row count ({total_row_count} rows)")
@@ -152,29 +154,30 @@ class Component(ComponentBase):
                     "total_count": total_row_count,
                 }
 
-            # Handle snapshot link
+            # Handle snapshot link - upload table to File Storage
             if attachments_config.include_snapshot_link:
-                # Resolve environment variables with fallback for local dev
-                stack_id = self.environment_variables.stack_id or "{stack}"
-                project_id = self.environment_variables.project_id or "{project_id}"
-                run_id = self.environment_variables.run_id or "{run_id}"
+                try:
+                    run_id = self.environment_variables.run_id or "unknown"
 
-                if not all(
-                    [
-                        self.environment_variables.stack_id,
-                        self.environment_variables.project_id,
-                        self.environment_variables.run_id,
-                    ]
-                ):
-                    logging.warning(
-                        "Unable to fully resolve snapshot link URL: one or more environment variables "
-                        "(stack_id, project_id, run_id) not available. Link will contain unresolved placeholders."
+                    file_id = storage_client.files.upload_file(
+                        file_path=table_path,
+                        tags=["data-snapshot", f"table:{table_id}", f"runId:{run_id}"],
+                        is_permanent=False,
+                        compress=True,
                     )
 
-                # Hardcoded URL pattern for Keboola table preview
-                resolved_url = f"https://{stack_id}/admin/projects/{project_id}/table-preview/{table_id}?context=%2Fqueue%2F{run_id}"
+                    stack_id = self.environment_variables.stack_id or "STACK_ID"
+                    project_id = self.environment_variables.project_id or "PROJECT_ID"
+                    resolved_url = f"https://{stack_id}/admin/projects/{project_id}/storage/files?q=id%3A{file_id}"
+                    snapshot_link = {"url": resolved_url, "text": "View table data snapshot in Storage"}
 
-                snapshot_link = {"url": resolved_url, "text": "View table snapshot in Storage"}
+                    logging.info(f"Uploaded data snapshot to File Storage (file_id={file_id}, table={table_id})")
+                except Exception as e:
+                    error_msg = f"Failed to upload data snapshot to File Storage: {e}"
+                    if self.cfg.continue_on_error:
+                        logging.warning(f"{error_msg}. Snapshot link will not be included.")
+                    else:
+                        raise UserException(error_msg)
 
         results_table = self.create_out_table_definition("results.csv", write_always=True)
         with open(results_table.full_path, "w", newline="") as output_file:
@@ -456,14 +459,18 @@ class Component(ComponentBase):
                 if snapshot_link:
                     link_text = snapshot_link["text"]
                     link_url = snapshot_link["url"]
+                    expiry_note = "(snapshot expires after 15 days)"
 
-                    # Append to plaintext (with colon)
-                    rendered_plaintext_message = f"{rendered_plaintext_message}\n{link_text}:\n{link_url}"
+                    # Append to plaintext (with colon and expiry note)
+                    rendered_plaintext_message = (
+                        f"{rendered_plaintext_message}\n{link_text}:\n{link_url}\n{expiry_note}"
+                    )
 
-                    # Append to HTML if present
+                    # Append to HTML if present (with expiry note)
                     if rendered_html_message:
                         rendered_html_message = (
-                            f'{rendered_html_message}\n<p>{link_text} <a href="{link_url}">{link_url}</a></p>'
+                            f'{rendered_html_message}\n<p>{link_text} <a href="{link_url}">{link_url}</a><br>'
+                            f"<small>{expiry_note}</small></p>"
                         )
 
                 email_ = self._client.build_email(

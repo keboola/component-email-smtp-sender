@@ -363,13 +363,24 @@
                 "dependencies": {"attachments_source": "single_table"}
               }
             },
+            "include_snapshot_link": {
+              "type": "boolean",
+              "title": "Include Link to Data Snapshot",
+              "description": "Uploads the source table to File Storage and includes a download link in the email body. The snapshot file expires after 15 days.",
+              "format": "checkbox",
+              "default": false,
+              "propertyOrder": 4,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"}
+              }
+            },
             "include_csv_sample": {
               "type": "boolean",
               "title": "Include CSV Sample",
               "description": "Attach a CSV file with the first N rows from the source table",
               "format": "checkbox",
               "default": true,
-              "propertyOrder": 4,
+              "propertyOrder": 5,
               "options": {
                 "dependencies": {"attachments_source": "single_table"}
               }
@@ -381,7 +392,7 @@
               "default": 100,
               "minimum": 1,
               "maximum": 1000,
-              "propertyOrder": 5,
+              "propertyOrder": 6,
               "options": {
                 "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
               }
@@ -391,7 +402,7 @@
               "title": "Sort Sample",
               "format": "checkbox",
               "default": false,
-              "propertyOrder": 6,
+              "propertyOrder": 7,
               "options": {
                 "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
               }
@@ -406,7 +417,7 @@
               "enum": [],
               "format": "select",
               "uniqueItems": true,
-              "propertyOrder": 7,
+              "propertyOrder": 8,
               "options": {
                 "async": {
                   "label": "Re-load columns",
@@ -421,7 +432,7 @@
               "title": "Sort Order",
               "enum": ["asc", "desc"],
               "default": "asc",
-              "propertyOrder": 8,
+              "propertyOrder": 9,
               "options": {
                 "enum_titles": ["Ascending", "Descending"],
                 "dependencies": {"include_csv_sample": true, "sample_sort_enabled": true}
@@ -432,7 +443,7 @@
               "title": "Sample Attachment Filename",
               "description": "Filename for the CSV sample. Use {table_name} placeholder.",
               "default": "{table_name}_sample.csv",
-              "propertyOrder": 9,
+              "propertyOrder": 10,
               "options": {
                 "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
               }
@@ -443,21 +454,10 @@
               "description": "Text appended to email body. Use {n} for sample rows, {total} for total rows.",
               "default": "Attachment contains {n} of {total} records.",
               "format": "textarea",
-              "propertyOrder": 10,
+              "propertyOrder": 11,
               "options": {
                 "input_height": "100px",
                 "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
-              }
-            },
-            "include_snapshot_link": {
-              "type": "boolean",
-              "title": "Include Link to Table Snapshot",
-              "description": "Appends a link to view the full table data as captured at the time of this job run",
-              "format": "checkbox",
-              "default": false,
-              "propertyOrder": 11,
-              "options": {
-                "dependencies": {"attachments_source": "single_table"}
               }
             },
             "validate_attachments": {
