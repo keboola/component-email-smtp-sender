@@ -805,7 +805,7 @@ class Component(ComponentBase):
                 return ValidationResult(valid_message, MessageType.SUCCESS)
 
             # Load columns only if we have placeholders to validate
-            columns = self.load_input_table_columns_()
+            columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
 
             # If loading failed, we can't validate - return error (strict)
             if isinstance(columns, ValidationResult):
@@ -897,7 +897,7 @@ class Component(ComponentBase):
                 return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
 
             # Load columns only if we have placeholders to validate
-            columns = self.load_input_table_columns_()
+            columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
 
             # If loading failed, we can't validate - return error (strict)
             if isinstance(columns, ValidationResult):
