@@ -309,6 +309,7 @@
         "attachments_config": {
           "title": "Attachments Config",
           "type": "object",
+          "format": "grid-strict",
           "propertyOrder": 6,
           "properties": {
             "attachments_source": {
@@ -318,7 +319,8 @@
               "enum": ["from_table", "single_table", "all_input_files"],
               "options": {
                 "enum_titles": ["Table Column", "Single Input Table", "All Input Files and Tables"],
-                "tooltip": "**Table Column** - each recipient gets specific attachments defined in a column (JSON list of filenames)\n- example: personalized attachments per recipient\n\n**Single Input Table** - attach a CSV sample and/or link to a selected input table\n- example: send preview of processed data or link to full table in Storage\n\n**All Input Files** - all recipients receive all non-template files in the input mapping"
+                "tooltip": "**Table Column** - each recipient gets specific attachments defined in a column (JSON list of filenames)\n- example: personalized attachments per recipient\n\n**Single Input Table** - attach a CSV sample and/or link to a selected input table\n- example: send preview of processed data or link to full table in Storage\n\n**All Input Files** - all recipients receive all non-template files in the input mapping",
+                "grid_columns": 12
               }
             },
             "attachments_column": {
@@ -339,7 +341,8 @@
                   "action": "load_input_table_columns",
                   "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
-                "dependencies": {"attachments_source":  "from_table"}
+                "dependencies": {"attachments_source":  "from_table"},
+                "grid_columns": 12
               }
             },
             "source_table": {
@@ -360,54 +363,22 @@
                   "action": "load_input_table_selection",
                   "autoload": []
                 },
-                "dependencies": {"attachments_source": "single_table"}
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
               }
             },
-            "include_snapshot_link": {
+            "sort_enabled": {
               "type": "boolean",
-              "title": "Include Link to Data Snapshot",
-              "description": "Uploads the source table to File Storage and includes a download link in the email body. The snapshot file expires after 15 days.",
+              "title": "Sort Table",
               "format": "checkbox",
               "default": false,
               "propertyOrder": 4,
               "options": {
-                "dependencies": {"attachments_source": "single_table"}
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
               }
             },
-            "include_csv_sample": {
-              "type": "boolean",
-              "title": "Include CSV Sample",
-              "description": "Attach a CSV file with the first N rows from the source table",
-              "format": "checkbox",
-              "default": true,
-              "propertyOrder": 5,
-              "options": {
-                "dependencies": {"attachments_source": "single_table"}
-              }
-            },
-            "sample_row_limit": {
-              "type": "integer",
-              "title": "Sample Row Limit",
-              "description": "Number of rows to include in sample (1-1000)",
-              "default": 100,
-              "minimum": 1,
-              "maximum": 1000,
-              "propertyOrder": 6,
-              "options": {
-                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
-              }
-            },
-            "sample_sort_enabled": {
-              "type": "boolean",
-              "title": "Sort Sample",
-              "format": "checkbox",
-              "default": false,
-              "propertyOrder": 7,
-              "options": {
-                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
-              }
-            },
-            "sample_sort_column": {
+            "sort_column": {
               "type": "string",
               "title": "Sort by Column",
               "items": {
@@ -417,25 +388,64 @@
               "enum": [],
               "format": "select",
               "uniqueItems": true,
-              "propertyOrder": 8,
+              "propertyOrder": 5,
               "options": {
                 "async": {
                   "label": "Re-load columns",
                   "action": "load_source_table_columns",
                   "autoload": ["parameters.advanced_options.attachments_config.source_table"]
                 },
-                "dependencies": {"include_csv_sample": true, "sample_sort_enabled": true}
+                "dependencies": {"attachments_source": "single_table", "sort_enabled": true},
+                "grid_columns": 9
               }
             },
-            "sample_sort_order": {
+            "sort_order": {
               "type": "string",
               "title": "Sort Order",
               "enum": ["asc", "desc"],
               "default": "asc",
-              "propertyOrder": 9,
+              "propertyOrder": 6,
               "options": {
                 "enum_titles": ["Ascending", "Descending"],
-                "dependencies": {"include_csv_sample": true, "sample_sort_enabled": true}
+                "dependencies": {"attachments_source": "single_table", "sort_enabled": true},
+                "grid_columns": 3
+              }
+            },
+            "include_snapshot_link": {
+              "type": "boolean",
+              "title": "Include Link to Data Snapshot",
+              "description": "Uploads the source table to File Storage and includes a download link in the email body. The snapshot file expires after 15 days.",
+              "format": "checkbox",
+              "default": false,
+              "propertyOrder": 7,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
+              }
+            },
+            "include_csv_sample": {
+              "type": "boolean",
+              "title": "Include CSV Sample",
+              "description": "Attach a CSV file with the first N rows from the source table",
+              "format": "checkbox",
+              "default": true,
+              "propertyOrder": 8,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
+              }
+            },
+            "sample_row_limit": {
+              "type": "integer",
+              "title": "Sample Row Limit",
+              "description": "Number of rows to include in sample (1-1000)",
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000,
+              "propertyOrder": 9,
+              "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 12
               }
             },
             "sample_attachment_filename": {
@@ -445,7 +455,8 @@
               "default": "{table_name}_sample.csv",
               "propertyOrder": 10,
               "options": {
-                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 12
               }
             },
             "sample_info_text": {
@@ -457,7 +468,8 @@
               "propertyOrder": 11,
               "options": {
                 "input_height": "100px",
-                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true}
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 12
               }
             },
             "validate_attachments": {
@@ -470,7 +482,8 @@
                   "label": "VALIDATE ATTACHMENTS",
                   "action": "validate_attachments"
                 },
-                "dependencies": {"attachments_source":  "from_table"}
+                "dependencies": {"attachments_source":  "from_table"},
+                "grid_columns": 12
               }
             }
           },

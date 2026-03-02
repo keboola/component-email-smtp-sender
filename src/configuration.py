@@ -141,7 +141,7 @@ class AttachmentsConfig(ConfigurationBase):
     "all_input_files"
     "from_table" -> "attachments_column"
     "single_table" -> "source_table", "include_csv_sample", "sample_row_limit", "sample_attachment_filename",
-                      "sample_info_text", "sample_sort_enabled", "sample_sort_column", "sample_sort_order",
+                      "sample_info_text", "sort_enabled", "sort_column", "sort_order",
                       "include_snapshot_link"
     """
 
@@ -152,9 +152,9 @@ class AttachmentsConfig(ConfigurationBase):
     sample_row_limit: int = 100
     sample_attachment_filename: str = "{table_name}_sample.csv"
     sample_info_text: str = "Attachment contains {n} of {total} records."
-    sample_sort_enabled: bool = False
-    sample_sort_column: Union[str, None] = None
-    sample_sort_order: str = "asc"
+    sort_enabled: bool = False
+    sort_column: Union[str, None] = None
+    sort_order: str = "asc"
     include_snapshot_link: bool = False
 
 

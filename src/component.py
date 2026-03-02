@@ -139,9 +139,9 @@ class Component(ComponentBase):
                     row_limit=attachments_config.sample_row_limit,
                     filename_template=attachments_config.sample_attachment_filename,
                     table_name=source_table,
-                    sort_enabled=attachments_config.sample_sort_enabled,
-                    sort_column=attachments_config.sample_sort_column,
-                    sort_order=attachments_config.sample_sort_order,
+                    sort_enabled=attachments_config.sort_enabled,
+                    sort_column=attachments_config.sort_column,
+                    sort_order=attachments_config.sort_order,
                 )
 
                 # Override attachments with sample file only
