@@ -49,7 +49,7 @@
           "title": "Include Attachments",
           "type": "boolean",
           "format": "checkbox",
-          "description": "if checked - all tables and files in input mapping will be used as attachments",
+          "description": "If checked, all tables and files in input mapping will be used as attachments.",
           "default": true,
           "propertyOrder": 4
         }
@@ -65,7 +65,6 @@
         "email_data_table_name": {
           "type": "string",
           "title": "Email Data Table",
-          "description": "name of the table with recipient email addresses, placeholders, other columns depending on your configuration",
           "items": {
             "enum": [],
             "type": "string"
@@ -80,7 +79,8 @@
               "action": "load_input_table_selection",
               "autoload": []
             },
-            "grid_columns": 6
+            "grid_columns": 6,
+            "tooltip": "Name of the table with recipient email addresses, placeholders, and other columns depending on your configuration."
           }
         },
         "recipient_email_address_column": {
@@ -159,7 +159,7 @@
             "validate_subject": {
                 "type": "button",
                 "format": "sync-action",
-                "description": "Checks, whether all placeholders in your subject template are contained in the input table",
+                "description": "Checks whether all placeholders in your subject template are contained in the input table.",
                 "propertyOrder": 7,
                 "options": {
                   "async": {
@@ -195,7 +195,7 @@
               "type": "boolean",
               "format": "checkbox",
               "title": "Use HTML Template",
-              "description": "HTML version is the primary displayed message, if recipients inbox doesn't support HTML, the message defaults to the plaintext version",
+              "description": "HTML version is the primary displayed message. If recipient's inbox doesn't support HTML, the message defaults to the plaintext version.",
               "default": true,
               "propertyOrder": 7,
               "options": {
@@ -284,7 +284,7 @@
             "validate_plaintext_template": {
               "type": "button",
               "format": "sync-action",
-              "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+              "description": "Checks whether all placeholders in your plaintext template are contained in the input table.",
               "propertyOrder": 7,
               "options": {
                 "async": {
@@ -311,7 +311,7 @@
             "validate_html_template": {
               "type": "button",
               "format": "sync-action",
-              "description": "Checks, whether all placeholders in your HTML template are contained in the input table",
+              "description": "Checks whether all placeholders in your HTML template are contained in the input table.",
               "propertyOrder": 9,
               "options": {
                 "async": {
@@ -363,7 +363,7 @@
               "type": "string",
               "title": "Data Column",
               "enum": [],
-              "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
+              "description": "Column expects JSON list of attachment filenames in input mapping, associated with specific recipients.",
               "items": {
                 "enum": [],
                 "type": "string"
@@ -384,7 +384,7 @@
             "source_table": {
               "type": "string",
               "title": "Source Table",
-              "description": "Input table to use as data source",
+              "description": "Input table to use as data source.",
               "items": {
                 "enum": [],
                 "type": "string"
@@ -418,7 +418,7 @@
             "include_csv_sample": {
               "type": "boolean",
               "title": "Include CSV Sample",
-              "description": "Include a CSV file with the first N rows from the source table",
+              "description": "Include a CSV file with the first N rows from the source table.",
               "format": "checkbox",
               "default": true,
               "propertyOrder": 5,
@@ -430,7 +430,7 @@
             "sample_row_limit": {
               "type": "integer",
               "title": "Sample Row Limit",
-              "description": "Number of rows to include in sample (1-1000)",
+              "description": "Number of rows to include in sample (1-1000).",
               "default": 100,
               "minimum": 1,
               "maximum": 1000,
@@ -511,7 +511,7 @@
             "validate_attachments": {
               "type": "button",
               "format": "sync-action",
-              "description": "Validates All attachments are present in file input mapping (excluding the template files)",
+              "description": "Validates all attachments are present in file input mapping (excluding template files).",
               "propertyOrder": 12,
               "options": {
                 "async": {
@@ -527,7 +527,7 @@
         "validate_config": {
           "type": "button",
           "format": "sync-action",
-          "description": "Validates the whole config",
+          "description": "Validates the whole config.",
           "propertyOrder": 20,
           "options": {
             "async": {
@@ -543,7 +543,7 @@
       "type": "boolean",
       "format": "checkbox",
       "title": "Dry run",
-      "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
+      "description": "If checked, only builds emails, but doesn't send them (useful because it will output results table containing what would be sent).",
       "default": false,
       "propertyOrder": 7
     },
@@ -551,7 +551,7 @@
       "type": "boolean",
       "format": "checkbox",
       "title": "Continue On Error",
-      "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
+      "description": "If checked, component doesn't crash on invalid emails, but tries to send the rest of them.",
       "default": true,
       "propertyOrder": 8
     }
