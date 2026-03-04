@@ -17,7 +17,7 @@ from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import MessageType, SelectElement, ValidationResult
 
 from client import SMTPClient
-from configuration import AdvancedEmailOptions, Configuration, ConnectionConfig
+from configuration import Configuration, ConnectionConfig
 from stack_overrides import StackOverridesParameters
 
 KEY_ALLOWED_SENDER_EMAIL_ADDRESSES = "allowed_sender_email_addresses"
@@ -47,11 +47,11 @@ RESULT_TABLE_COLUMNS = (
     "error_message",
 )
 
-VALID_CONNECTION_CONFIG_MESSAGE = "✅ - Connection configuration is valid"
-VALID_SUBJECT_MESSAGE = "✅ - All subject placeholders are present in the input table"
-VALID_PLAINTEXT_TEMPLATE_MESSAGE = "✅ - All plaintext template placeholders are present in the input table"
-VALID_HTML_TEMPLATE_MESSAGE = "✅ - All HTML template placeholders are present in the input table"
-VALID_ATTACHMENTS_MESSAGE = "✅ - All attachments are present"
+VALID_CONNECTION_CONFIG_MESSAGE = "✅ Connection configuration is valid"
+VALID_SUBJECT_MESSAGE = "✅ All subject placeholders are present in the input table"
+VALID_PLAINTEXT_TEMPLATE_MESSAGE = "✅ All plaintext template placeholders are present in the input table"
+VALID_HTML_TEMPLATE_MESSAGE = "✅ All HTML template placeholders are present in the input table"
+VALID_ATTACHMENTS_MESSAGE = "✅ All attachments are present"
 
 general_error_row = {
     "status": "ERROR",
@@ -69,14 +69,14 @@ class Component(ComponentBase):
 
     def __init__(self):
         super().__init__()
-        self.cfg = Configuration
+        self._init_configuration()
         self._client: SMTPClient = None
         self._results_writer = None
         self.plaintext_template_path = None
         self.html_template_path = None
 
     def run(self):
-        self._init_configuration()
+        self._validate_run_configuration()
         self.init_client()
 
         if self.cfg.configuration_type == "advanced":
@@ -99,13 +99,96 @@ class Component(ComponentBase):
         except Exception as e:
             raise UserException(f"Error loading attachments: {str(e)}")
 
+        # Handle single table mode: CSV sample and/or snapshot link
+        sample_metadata = None
+        snapshot_link = None
+        if (
+            self.cfg.configuration_type == "advanced"
+            and self.cfg.advanced_options.include_attachments
+            and self.cfg.advanced_options.attachments_config.attachments_source == "single_table"
+        ):
+            attachments_config = self.cfg.advanced_options.attachments_config
+            source_table = attachments_config.source_table
+
+            # Resolve table path and table_id from input mapping (validation already done in _validate_run_configuration)
+            table_path = self._resolve_data_source_table_path(source_table)
+            table_id = next(
+                table.source for table in self.configuration.tables_input_mapping if table.destination == source_table
+            )
+
+            # Initialize storage client once for both CSV sample and snapshot link
+            storage_client = self._init_storage_client()
+
+            # Handle CSV sample generation
+            if attachments_config.include_csv_sample:
+                # Get total row count - prefer Storage API, fallback to local CSV
+                try:
+                    table_detail = storage_client.tables.detail(table_id)
+                    total_row_count = table_detail["rowsCount"]
+                    logging.info(f"Table sample: using Storage API row count ({total_row_count} rows)")
+                except Exception as e:
+                    logging.warning(
+                        f"Table sample: Storage API unavailable ({str(e)}), "
+                        f"falling back to local CSV row count (may be inaccurate if input mapping uses limit/filters)"
+                    )
+                    total_row_count = self._count_csv_rows(table_path)
+
+                # Generate sample CSV
+                sample_file_path, actual_row_count = self._generate_table_sample(
+                    table_path=table_path,
+                    row_limit=attachments_config.sample_row_limit,
+                    filename_template=attachments_config.sample_attachment_filename,
+                    table_name=source_table,
+                    sort_enabled=attachments_config.sort_enabled,
+                    sort_column=attachments_config.sort_column,
+                    sort_order=attachments_config.sort_order,
+                )
+
+                # Override attachments with sample file only
+                attachments_paths_by_filename = {os.path.basename(sample_file_path): sample_file_path}
+
+                # Store sample metadata for send_emails
+                sample_metadata = {
+                    "info_text": attachments_config.sample_info_text,
+                    "row_count": actual_row_count,
+                    "total_count": total_row_count,
+                }
+
+            # Handle snapshot link - upload table to File Storage
+            if attachments_config.include_snapshot_link:
+                try:
+                    run_id = self.environment_variables.run_id or "unknown"
+
+                    file_id = storage_client.files.upload_file(
+                        file_path=table_path,
+                        tags=["data-snapshot", f"table:{table_id}", f"runId:{run_id}"],
+                        is_permanent=False,
+                        compress=True,
+                    )
+
+                    stack_id = self.environment_variables.stack_id or "STACK_ID"
+                    project_id = self.environment_variables.project_id or "PROJECT_ID"
+                    resolved_url = f"https://{stack_id}/admin/projects/{project_id}/storage/files?q=id%3A{file_id}"
+                    snapshot_link = {"url": resolved_url, "text": "View table data snapshot in Storage"}
+
+                    logging.info(f"Uploaded data snapshot to File Storage (file_id={file_id}, table={table_id})")
+                except Exception as e:
+                    error_msg = f"Failed to upload data snapshot to File Storage: {e}"
+                    if self.cfg.continue_on_error:
+                        logging.warning(f"{error_msg}. Snapshot link will not be included.")
+                    else:
+                        raise UserException(error_msg)
+
         results_table = self.create_out_table_definition("results.csv", write_always=True)
         with open(results_table.full_path, "w", newline="") as output_file:
             self._results_writer = csv.DictWriter(output_file, fieldnames=RESULT_TABLE_COLUMNS)
             self._results_writer.writeheader()
             self._results_writer.errors = False
             self.send_emails(
-                email_data_table_path=email_data_table_path, attachments_paths_by_filename=attachments_paths_by_filename
+                email_data_table_path=email_data_table_path,
+                attachments_paths_by_filename=attachments_paths_by_filename,
+                sample_metadata=sample_metadata,
+                snapshot_link=snapshot_link,
             )
         self.write_manifest(results_table)
 
@@ -115,6 +198,49 @@ class Component(ComponentBase):
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
         self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
+
+    def _validate_run_configuration(self) -> None:
+        """
+        Validate configuration for single table mode (CSV sample and snapshot link features).
+        Should be called after configuration is loaded and before actual work begins.
+        Skips validation for basic mode.
+        """
+        # Skip validation in basic mode
+        if self.cfg.configuration_type == "basic":
+            return
+
+        # Validate attachment source is a recognized value (early check)
+        if self.cfg.advanced_options.include_attachments:
+            attachments_source = self.cfg.advanced_options.attachments_config.attachments_source
+            if attachments_source not in ("from_table", "single_table", "all_input_files"):
+                raise UserException(
+                    f"Unknown attachment source: '{attachments_source}'. "
+                    f"Valid options: 'from_table', 'single_table', 'all_input_files'"
+                )
+
+        # Validate single table mode configuration
+        if (
+            self.cfg.advanced_options.include_attachments
+            and self.cfg.advanced_options.attachments_config.attachments_source == "single_table"
+        ):
+            attachments_config = self.cfg.advanced_options.attachments_config
+            source_table = attachments_config.source_table
+
+            # Source table must be specified
+            if not source_table:
+                raise UserException("Source table must be specified for single table mode")
+
+            # Verify table exists in input tables
+            try:
+                self._resolve_data_source_table_path(source_table)
+            except UserException:
+                raise  # Re-raise with original message
+
+            # At least one feature (CSV sample or snapshot link) must be enabled
+            if not attachments_config.include_csv_sample and not attachments_config.include_snapshot_link:
+                raise UserException(
+                    "At least one option must be enabled: 'Include CSV Sample' or 'Include Link to Table Snapshot'"
+                )
 
     def _load_stack_overrides(self) -> StackOverridesParameters:
         image_parameters = self.configuration.image_parameters or {}
@@ -188,14 +314,20 @@ class Component(ComponentBase):
     @staticmethod
     def load_email_data_table_path(in_tables, email_data_table_name):
         try:
-            table_path = next(in_table.full_path for in_table in in_tables if in_table.name == email_data_table_name)
+            table_path = next(
+                in_table.full_path for in_table in in_tables if Path(in_table.full_path).name == email_data_table_name
+            )
         except StopIteration:
             table_path = None
         return table_path
 
     @staticmethod
     def _load_attachment_tables(in_tables, table_to_exclude):
-        tables = {in_table.name: in_table.full_path for in_table in in_tables if in_table.name != table_to_exclude}
+        tables = {
+            Path(in_table.full_path).name: in_table.full_path
+            for in_table in in_tables
+            if Path(in_table.full_path).name != table_to_exclude
+        }
         return tables
 
     def _load_attachment_files(self, in_files_by_name):
@@ -218,7 +350,11 @@ class Component(ComponentBase):
         return {**table_attachments_paths_by_filename, **file_attachments_paths_by_filename}
 
     def send_emails(
-        self, attachments_paths_by_filename: Dict[str, str], email_data_table_path: Union[str, None] = None
+        self,
+        attachments_paths_by_filename: Dict[str, str],
+        email_data_table_path: Union[str, None] = None,
+        sample_metadata: Union[Dict, None] = None,
+        snapshot_link: Union[Dict, None] = None,
     ) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
@@ -232,7 +368,6 @@ class Component(ComponentBase):
         subject_column = None
         plaintext_template_column = None
         html_template_column = None
-        all_attachments = attachments_config.attachments_source == "all_input_files"
         attachments_column = attachments_config.attachments_column
 
         if email_data_table_path:
@@ -298,11 +433,45 @@ class Component(ComponentBase):
 
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
                     if self.cfg.advanced_options.include_attachments and not self._client.disable_attachments:
-                        if not all_attachments:
+                        # Only "from_table" mode needs per-row attachment loading from CSV column;
+                        # other modes (all_input_files, single_table) use the same attachments for all recipients
+                        if attachments_config.attachments_source == "from_table":
                             custom_attachments_paths_by_filename = {
                                 attachment_filename: attachments_paths_by_filename[attachment_filename]
                                 for attachment_filename in json.loads(row[attachments_column])
                             }
+
+                # Append sample info text to email body if present
+                if sample_metadata and not self._client.disable_attachments:
+                    info_text_rendered = sample_metadata["info_text"].format(
+                        n=sample_metadata["row_count"],
+                        total=sample_metadata["total_count"],
+                    )
+
+                    # Append to plaintext
+                    rendered_plaintext_message = f"{rendered_plaintext_message}\n{info_text_rendered}"
+
+                    # Append to HTML if present
+                    if rendered_html_message:
+                        rendered_html_message = f"{rendered_html_message}\n<p>{info_text_rendered}</p>"
+
+                # Append custom link to email body if present
+                if snapshot_link:
+                    link_text = snapshot_link["text"]
+                    link_url = snapshot_link["url"]
+                    expiry_note = "(snapshot expires after 15 days)"
+
+                    # Append to plaintext (with colon and expiry note)
+                    rendered_plaintext_message = (
+                        f"{rendered_plaintext_message}\n{link_text}:\n{link_url}\n{expiry_note}"
+                    )
+
+                    # Append to HTML if present (with expiry note)
+                    if rendered_html_message:
+                        rendered_html_message = (
+                            f'{rendered_html_message}\n<p>{link_text} <a href="{link_url}">{link_url}</a><br>'
+                            f"<small>{expiry_note}</small></p>"
+                        )
 
                 email_ = self._client.build_email(
                     recipient_email_address=recipient_email_address,
@@ -421,7 +590,7 @@ class Component(ComponentBase):
         missing_columns = set(template_placeholders) - set(columns)
         if missing_columns:
             if not continue_on_error:
-                raise UserException("❌ - Missing columns: " + ", ".join(missing_columns))
+                raise UserException("❌ Missing columns: " + ", ".join(missing_columns))
 
     def _get_attachments_filenames_from_table(self, in_table_path: str) -> Set[str]:
         attachments_filenames = set()
@@ -438,6 +607,95 @@ class Component(ComponentBase):
             )
         return attachments_filenames
 
+    def _resolve_data_source_table_path(self, table_destination: str) -> str:
+        """
+        Resolves data source table destination name to local file path.
+
+        Args:
+            table_destination: Table destination name from config (e.g., "email_export.csv")
+
+        Returns:
+            Local CSV file path
+
+        Raises:
+            UserException: If table not found in input tables
+        """
+        in_tables = self.get_input_tables_definitions()
+        try:
+            return next(
+                in_table.full_path for in_table in in_tables if Path(in_table.full_path).name == table_destination
+            )
+        except StopIteration:
+            available = [Path(t.full_path).name for t in in_tables]
+            raise UserException(
+                f"Data source table '{table_destination}' not found in input tables. Available: {available}"
+            )
+
+    def _count_csv_rows(self, csv_path: str) -> int:
+        """
+        Counts data rows in CSV file (excluding header).
+
+        Args:
+            csv_path: Path to CSV file
+
+        Returns:
+            Number of data rows (header not counted)
+        """
+        with open(csv_path, encoding="utf-8") as f:
+            return max(0, sum(1 for _ in f) - 1)
+
+    def _generate_table_sample(
+        self,
+        table_path: str,
+        row_limit: int,
+        filename_template: str,
+        table_name: str,
+        sort_enabled: bool = False,
+        sort_column: Union[str, None] = None,
+        sort_order: str = "asc",
+    ) -> Tuple[str, int]:
+        """
+        Generates a CSV sample file with first N rows, optionally sorted.
+
+        Args:
+            table_path: Path to source CSV file
+            row_limit: Maximum number of rows to include
+            filename_template: Filename template with {table_name} placeholder
+            table_name: Table name for filename substitution
+            sort_enabled: Whether sorting is enabled
+            sort_column: Column name to sort by (optional)
+            sort_order: Sort order - "asc" or "desc" (default: "asc")
+
+        Returns:
+            Tuple of (sample_file_path, actual_row_count)
+        """
+        filename = filename_template.replace("{table_name}", table_name)
+        sample_path = os.path.join(self.data_folder_path, filename)
+
+        with open(table_path, encoding="utf-8") as source:
+            reader = csv.DictReader(source)
+            header = reader.fieldnames
+
+            # Read rows up to limit
+            rows = []
+            for i, row in enumerate(reader):
+                if i >= row_limit:
+                    break
+                rows.append(row)
+
+            # Sort if enabled and column specified and exists in header
+            if sort_enabled and sort_column and sort_column in header:
+                reverse = sort_order == "desc"
+                rows.sort(key=lambda r: r.get(sort_column, ""), reverse=reverse)
+
+            # Write to sample file
+            with open(sample_path, "w", encoding="utf-8", newline="") as dest:
+                writer = csv.DictWriter(dest, fieldnames=header)
+                writer.writeheader()
+                writer.writerows(rows)
+
+        return sample_path, len(rows)
+
     def _get_missing_columns_from_table(self, reader: csv.DictReader, column: str) -> Set[str]:
         unique_placeholders = set()
         for row in reader:
@@ -453,7 +711,7 @@ class Component(ComponentBase):
         template_column = self.cfg.advanced_options.message_body_config[key_template_column]
         missing_columns = self._get_missing_columns_from_table(reader, template_column)
         if missing_columns:
-            message = "❌ - Missing columns: " + ", ".join(missing_columns)
+            message = "❌ Missing columns: " + ", ".join(missing_columns)
             message_type = MessageType.DANGER
         return ValidationResult(message, message_type)
 
@@ -529,7 +787,6 @@ class Component(ComponentBase):
             return []
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
-        self._init_configuration()
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
         if self.cfg.advanced_options.message_body_config.message_body_source == "from_table":
             table_name = self.cfg.advanced_options.email_data_table_name
@@ -539,8 +796,25 @@ class Component(ComponentBase):
                 return self._validate_templates_from_table(reader, plaintext)
         else:
             template_text = self._read_template_text(plaintext)
+
+            # Parse placeholders first
+            template_placeholders = self._parse_template_placeholders(template_text)
+
+            # If no placeholders, validation passes immediately
+            if not template_placeholders:
+                return ValidationResult(valid_message, MessageType.SUCCESS)
+
+            # Load columns only if we have placeholders to validate
+            columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
+
+            # If loading failed, we can't validate - return error (strict)
+            if isinstance(columns, ValidationResult):
+                return ValidationResult(
+                    "❌ Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
+                )
+
+            # Validate placeholders against columns
             try:
-                columns = self.load_input_table_columns_()
                 self._validate_template_text(template_text, columns)
                 return ValidationResult(valid_message, MessageType.SUCCESS)
             except UserException as e:
@@ -553,9 +827,9 @@ class Component(ComponentBase):
         connection_config = ConnectionConfig.load_from_dict(self.configuration.parameters["connection_config"])
         try:
             self.init_client(connection_config=connection_config)
-            return ValidationResult("✅ - Connection established successfully", MessageType.SUCCESS)
+            return ValidationResult("✅ Connection established successfully", MessageType.SUCCESS)
         except Exception as e:
-            return ValidationResult(f"❌ - Connection couldn't be established. Error: {e}", MessageType.DANGER)
+            return ValidationResult(f"❌ Connection couldn't be established. Error: {e}", MessageType.DANGER)
 
     @sync_action("testConnection")
     def test_smtp_server_connection(self) -> ValidationResult:
@@ -563,15 +837,12 @@ class Component(ComponentBase):
 
     @sync_action("load_input_table_selection")
     def load_input_table_selection(self) -> List[SelectElement]:
-        self._init_configuration()
         return [SelectElement(table.destination) for table in self.configuration.tables_input_mapping]
 
-    def load_input_table_columns_(self) -> Union[List[str], ValidationResult]:
-        advanced_options = AdvancedEmailOptions.load_from_dict(self.configuration.parameters["advanced_options"])
-        table_name = advanced_options.email_data_table_name
+    def _load_table_columns(self, table_name: str | None, field_label: str) -> list[str] | ValidationResult:
+        """Fetch columns from a table via Storage API. Used by sync actions."""
         if table_name is None:
-            message = "You must specify `Email Data Table Name` before loading columns"
-            return ValidationResult(message, MessageType.DANGER)
+            return ValidationResult(f"You must specify `{field_label}` before loading columns", MessageType.DANGER)
         try:
             table_id = next(
                 table.source for table in self.configuration.tables_input_mapping if table.destination == table_name
@@ -589,16 +860,21 @@ class Component(ComponentBase):
             return ValidationResult("Couldn't fetch columns", MessageType.DANGER)
 
     @sync_action("load_input_table_columns")
-    def load_input_table_columns(self) -> List[SelectElement]:
-        columns = self.load_input_table_columns_()
+    def load_input_table_columns(self) -> list[SelectElement]:
+        columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
+        if isinstance(columns, ValidationResult):
+            return columns
+        return [SelectElement(column) for column in columns]
+
+    @sync_action("load_source_table_columns")
+    def load_source_table_columns(self) -> list[SelectElement]:
+        columns = self._load_table_columns(self.cfg.advanced_options.attachments_config.source_table, "Source Table")
         if isinstance(columns, ValidationResult):
             return columns
         return [SelectElement(column) for column in columns]
 
     def validate_subject_(self) -> ValidationResult:
-        self._init_configuration()
         subject_config = self.cfg.advanced_options.subject_config
-        message = VALID_SUBJECT_MESSAGE
         if subject_config.subject_source == "from_table":
             subject_column = subject_config.subject_column
             table_name = self.cfg.advanced_options.email_data_table_name
@@ -607,16 +883,34 @@ class Component(ComponentBase):
                 reader = csv.DictReader(in_table)
                 missing_columns = self._get_missing_columns_from_table(reader, subject_column)
                 if missing_columns:
-                    message = "❌ - Missing columns: " + ", ".join(missing_columns)
+                    message = "❌ Missing columns: " + ", ".join(missing_columns)
+                    return ValidationResult(message, MessageType.DANGER)
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
         else:
             subject_template_text = subject_config.subject_template_definition
-            columns = self.load_input_table_columns_()
+
+            # Parse placeholders first
+            template_placeholders = self._parse_template_placeholders(subject_template_text)
+
+            # If no placeholders, validation passes immediately
+            if not template_placeholders:
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+
+            # Load columns only if we have placeholders to validate
+            columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
+
+            # If loading failed, we can't validate - return error (strict)
+            if isinstance(columns, ValidationResult):
+                return ValidationResult(
+                    "❌ Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
+                )
+
+            # Validate placeholders against columns
             try:
                 self._validate_template_text(subject_template_text, columns)
-            except Exception as e:
-                message = str(e)
-        message_type = MessageType.SUCCESS if message == VALID_SUBJECT_MESSAGE else MessageType.DANGER
-        return ValidationResult(message, message_type)
+                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+            except UserException as e:
+                return ValidationResult(str(e), MessageType.DANGER)
 
     @sync_action("validate_subject")
     def validate_subject(self) -> ValidationResult:
@@ -637,10 +931,9 @@ class Component(ComponentBase):
         return self.validate_html_template_()
 
     def validate_attachments_(self) -> ValidationResult:
-        self._init_configuration()
         message = VALID_ATTACHMENTS_MESSAGE
         try:
-            if self.cfg.advanced_options.attachments_config.attachments_source != "all_input_files":
+            if self.cfg.advanced_options.attachments_config.attachments_source == "from_table":
                 table_name = self.cfg.advanced_options.email_data_table_name
                 in_table_path = self._return_table_path(table_name)
                 expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
@@ -648,9 +941,9 @@ class Component(ComponentBase):
                 input_tables = set([table.destination for table in self.configuration.tables_input_mapping])
                 missing_attachments = expected_input_filenames - input_filenames - input_tables
                 if missing_attachments:
-                    message = "❌ - Missing attachments: " + ", ".join(missing_attachments)
+                    message = "❌ Missing attachments: " + ", ".join(missing_attachments)
         except Exception as e:
-            message = f"❌ - Couldn't validate attachments. Error: {e}"
+            message = f"❌ Couldn't validate attachments. Error: {e}"
         message_type = MessageType.SUCCESS if message == VALID_ATTACHMENTS_MESSAGE else MessageType.DANGER
         return ValidationResult(message, message_type)
 
@@ -658,9 +951,54 @@ class Component(ComponentBase):
     def validate_attachments(self) -> ValidationResult:
         return self.validate_attachments_()
 
+    def validate_single_table_(self) -> ValidationResult:
+        """
+        Validate single table mode configuration (CSV sample and snapshot link features).
+
+        Note: This is a helper method (trailing underscore) called from validate_config() sync action.
+        The underscore suffix prevents the @sync_action decorator from interfering when called from
+        another sync action - decorated methods would redirect stdout, write JSON, and potentially exit(),
+        which would hijack the caller's output handling.
+
+        Returns ValidationResult with aggregated error messages (all errors at once, not fail-fast).
+        """
+        errors = []
+
+        attachments_config = self.cfg.advanced_options.attachments_config
+        source_table = attachments_config.source_table
+
+        # Check 1: Source table must be specified
+        if not source_table:
+            errors.append("❌ Source table must be specified for single table mode")
+        else:
+            # Check 2: Source table must exist in input tables (use tables_input_mapping for sync actions)
+            available_tables = [table.destination for table in self.configuration.tables_input_mapping]
+            if source_table not in available_tables:
+                errors.append(
+                    f"❌ Source table '{source_table}' not found in input tables. Available: {available_tables}"
+                )
+
+        # Check 3: At least one toggle must be enabled
+        if not attachments_config.include_csv_sample and not attachments_config.include_snapshot_link:
+            errors.append(
+                "❌ At least one option must be enabled: 'Include CSV Sample' or 'Include Link to Table Snapshot'"
+            )
+
+        if errors:
+            message = "\n\n".join(errors)
+            message_type = MessageType.ERROR
+        else:
+            message = "✅ Single table configuration is valid"
+            message_type = MessageType.SUCCESS
+
+        return ValidationResult(message, message_type)
+
+    @sync_action("validate_single_table")
+    def validate_single_table(self) -> ValidationResult:
+        return self.validate_single_table_()
+
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
-        self._init_configuration()
         # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
         validation_methods = [
             self.test_smtp_server_connection_,
@@ -673,7 +1011,20 @@ class Component(ComponentBase):
         image_parameters = self.configuration.image_parameters or {}
         disable_attachments = image_parameters.get(KEY_DISABLE_ATTACHMENTS, False)
         if self.cfg.advanced_options.include_attachments and not disable_attachments:
-            validation_methods.append(self.validate_attachments_)
+            attachments_source = self.cfg.advanced_options.attachments_config.attachments_source
+
+            # Early return for unrecognized attachment source values (e.g., legacy configs)
+            if attachments_source not in ("from_table", "single_table", "all_input_files"):
+                return ValidationResult(
+                    f"❌ Unknown attachment source: '{attachments_source}'. "
+                    f"Valid options: 'from_table', 'single_table', 'all_input_files'",
+                    MessageType.DANGER,
+                )
+
+            if attachments_source == "single_table":
+                validation_methods.append(self.validate_single_table_)
+            elif attachments_source == "from_table":
+                validation_methods.append(self.validate_attachments_)
 
         messages = [validation_method().message for validation_method in validation_methods]
 

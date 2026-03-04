@@ -49,7 +49,7 @@
           "title": "Include Attachments",
           "type": "boolean",
           "format": "checkbox",
-          "description": "if checked - all tables and files in input mapping will be used as attachments",
+          "description": "If checked, all tables and files in input mapping will be used as attachments.",
           "default": true,
           "propertyOrder": 4
         }
@@ -58,13 +58,13 @@
     "advanced_options": {
       "title": "Advanced Options",
       "type": "object",
+      "format": "grid-strict",
       "propertyOrder": 3,
       "options": {"dependencies": {"configuration_type": "advanced"}},
       "properties": {
         "email_data_table_name": {
           "type": "string",
-          "title": "Email Data Table Name",
-          "description": "name of the table with recipient email addresses, placeholders, other columns depending on your configuration",
+          "title": "Email Data Table",
           "items": {
             "enum": [],
             "type": "string"
@@ -78,12 +78,14 @@
               "label": "Re-load tables",
               "action": "load_input_table_selection",
               "autoload": []
-            }
+            },
+            "grid_columns": 6,
+            "tooltip": "Name of the table with recipient email addresses, placeholders, and other columns depending on your configuration."
           }
         },
         "recipient_email_address_column": {
           "type": "string",
-          "title": "Recipient Email Address Column",
+          "title": "Recipient Column",
           "items": {
             "enum": [],
             "type": "string"
@@ -97,21 +99,27 @@
               "label": "Re-load columns",
               "action": "load_input_table_columns",
               "autoload": ["parameters.advanced_options.email_data_table_name"]
-            }
+            },
+            "grid_columns": 6
           }
         },
         "subject_config": {
-          "title": "Subject Config",
+          "title": "Subject",
           "type": "object",
+          "format": "grid-strict",
           "propertyOrder": 3,
+          "options": {
+            "grid_columns": 12
+          },
           "properties": {
             "subject_source": {
-              "title": "Subject Source",
+              "title": "Source",
               "type": "string",
               "enum": ["from_table", "from_template_definition"],
               "options": {
                 "enum_titles": ["From Table", "From Template Definition"],
-                "tooltip": "**From Table** - specify column which contains subject template/text in Jinja2 format \n- example use case - You want to have different subject for different recipients.\n\n**From Template Definition** - paste the subject template/text into the text area field \n- example use case - You want all recipients to receive similar subject template/text"
+                "tooltip": "**From Table** - specify column which contains subject template/text in Jinja2 format \n- example use case - You want to have different subject for different recipients.\n\n**From Template Definition** - paste the subject template/text into the text area field \n- example use case - You want all recipients to receive similar subject template/text",
+                "grid_columns": 4
               },
               "propertyOrder": 1
             },
@@ -132,7 +140,8 @@
                   "action": "load_input_table_columns",
                   "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
-                "dependencies": {"subject_source": "from_table"}
+                "dependencies": {"subject_source": "from_table"},
+                "grid_columns": 8
               }
             },
             "subject_template_definition": {
@@ -143,35 +152,42 @@
               "format": "textarea",
               "options": {
                 "input_height": "100px",
-                "dependencies": {"subject_source":  "from_template_definition"}
+                "dependencies": {"subject_source":  "from_template_definition"},
+                "grid_columns": 12
               }
             },
             "validate_subject": {
                 "type": "button",
                 "format": "sync-action",
-                "description": "Checks, whether all placeholders in your subject template are contained in the input table",
+                "description": "Checks whether all placeholders in your subject template are contained in the input table.",
                 "propertyOrder": 7,
                 "options": {
                   "async": {
-                    "label": "VALIDATE SUBJECT",
+                    "label": "Validate Subject",
                     "action": "validate_subject"
-                  }
+                  },
+                  "grid_columns": 12
                 }
               }
             }
         },
         "message_body_config": {
-          "title": "Message Body Config",
+          "title": "Message Body",
           "type": "object",
+          "format": "grid-strict",
           "propertyOrder": 4,
+          "options": {
+            "grid_columns": 12
+          },
           "properties": {
             "message_body_source": {
-              "title": "Message Body Source",
+              "title": "Source",
               "type": "string",
               "enum": ["from_table", "from_template_file", "from_template_definition"],
               "options": {
                 "enum_titles": ["From Table", "From Template File", "From Template Definition"],
-                "tooltip": "**From Table** - specify column which contains template in Jinja2 format \n- example use case - You want to have different template/message for different recipients.\n\n**From Template File** - specify input file name containing the template in Jinja2 format \n- example use case - you want each recipient to receive similar template (with differently filled placeholders), and have an orchestration which spawns this template, so that this configuration has the template updated automatically\n\n**From Template Definition** - paste the template text into the text area field \n- example use case - You want all recipients to receive similar template and it will not be changed often."
+                "tooltip": "**From Table** - specify column which contains template in Jinja2 format \n- example use case - You want to have different template/message for different recipients.\n\n**From Template File** - specify input file name containing the template in Jinja2 format \n- example use case - you want each recipient to receive similar template (with differently filled placeholders), and have an orchestration which spawns this template, so that this configuration has the template updated automatically\n\n**From Template Definition** - paste the template text into the text area field \n- example use case - You want all recipients to receive similar template and it will not be changed often.",
+                "grid_columns": 4
               },
               "propertyOrder": 1
             },
@@ -179,13 +195,16 @@
               "type": "boolean",
               "format": "checkbox",
               "title": "Use HTML Template",
-              "description": "HTML version is the primary displayed message, if recipients inbox doesn't support HTML, the message defaults to the plaintext version",
+              "description": "HTML version is the primary displayed message. If recipient's inbox doesn't support HTML, the message defaults to the plaintext version.",
               "default": true,
-              "propertyOrder": 7
+              "propertyOrder": 7,
+              "options": {
+                "grid_columns": 12
+              }
             },
             "plaintext_template_column": {
               "type": "string",
-              "title": "Plaintext Message Template Column",
+              "title": "Plaintext Template Column",
               "enum": [],
               "items": {
                 "enum": [],
@@ -200,12 +219,13 @@
                   "action": "load_input_table_columns",
                   "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
-                "dependencies": {"message_body_source": "from_table"}
+                "dependencies": {"message_body_source": "from_table"},
+                "grid_columns": 8
               }
             },
             "html_template_column": {
               "type": "string",
-              "title": "HTML Message Template Column",
+              "title": "HTML Template Column",
               "enum": [],
               "items": {
                 "enum": [],
@@ -223,7 +243,8 @@
                 "dependencies": {
                   "use_html_template": true,
                   "message_body_source": "from_table"
-                }
+                },
+                "grid_columns": 12
               }
             },
             "plaintext_template_filename": {
@@ -232,7 +253,8 @@
               "default": "template.txt",
               "propertyOrder": 4,
               "options": {
-                "dependencies": {"message_body_source": "from_template_file"}
+                "dependencies": {"message_body_source": "from_template_file"},
+                "grid_columns": 8
               }
             },
             "html_template_filename": {
@@ -243,89 +265,105 @@
               "options": {
                 "dependencies": {
                   "use_html_template": true,
-                  "message_body_source": "from_template_file"}
+                  "message_body_source": "from_template_file"},
+                "grid_columns": 8
               }
             },
             "plaintext_template_definition": {
               "propertyOrder": 6,
               "type": "string",
-              "title": "Plaintext Message Body Template",
+              "title": "Plaintext Template",
               "default": "Example message body.",
               "format": "textarea",
               "options": {
                 "input_height": "100px",
-                "dependencies": {"message_body_source": "from_template_definition"}
+                "dependencies": {"message_body_source": "from_template_definition"},
+                "grid_columns": 12
               }
             },
             "validate_plaintext_template": {
               "type": "button",
               "format": "sync-action",
-              "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+              "description": "Checks whether all placeholders in your plaintext template are contained in the input table.",
               "propertyOrder": 7,
               "options": {
                 "async": {
-                  "label": "VALIDATE PLAINTEXT TEMPLATE",
+                  "label": "Validate Plaintext Template",
                   "action": "validate_plaintext_template"
-                }
+                },
+                "grid_columns": 12
               }
             },
             "html_template_definition": {
               "propertyOrder": 8,
               "type": "string",
-              "title": "HTML Message Body Template",
+              "title": "HTML Template",
               "format": "textarea",
               "default": "<h3>Example message body title</h3><p>Example message body paragraph.</p>",
               "options": {
                 "input_height": "100px",
                 "dependencies": {
                   "use_html_template": true,
-                  "message_body_source": "from_template_definition"}
+                  "message_body_source": "from_template_definition"},
+                "grid_columns": 12
               }
             },
             "validate_html_template": {
               "type": "button",
               "format": "sync-action",
-              "description": "Checks, whether all placeholders in your plaintext template are contained in the input table",
+              "description": "Checks whether all placeholders in your HTML template are contained in the input table.",
               "propertyOrder": 9,
               "options": {
                 "async": {
-                  "label": "VALIDATE HTML TEMPLATE",
+                  "label": "Validate HTML Template",
                   "action": "validate_html_template"
                 },
                 "dependencies": {
                   "use_html_template": true
-                }
+                },
+                "grid_columns": 12
               }
             }
           }
         },
         "include_attachments": {
           "type": "boolean",
-          "title": "Include Attachments",
+          "title": "Attach Data",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 5
+          "propertyOrder": 5,
+          "options": {
+            "grid_columns": 12
+          }
         },
         "attachments_config": {
-          "title": "Attachments Config",
+          "title": "Data Options",
           "type": "object",
+          "format": "grid-strict",
           "propertyOrder": 6,
+          "options": {
+            "grid_columns": 12,
+            "dependencies": {
+              "include_attachments": true
+            }
+          },
           "properties": {
             "attachments_source": {
-              "title": "Attachments Source",
+              "title": "Data Source",
               "type": "string",
               "propertyOrder": 1,
-              "enum": ["from_table", "all_input_files"],
+              "enum": ["from_table", "single_table", "all_input_files"],
               "options": {
-                "enum_titles": ["From Table", "All Input Files and Tables"],
-                "tooltip": "**From Table** - column expects json list of attachment filenames in input mapping, associated with specific recipients \n- example use case - you want to have control over who receives what - everybody could receive newsletter associated pdf, but certain recipients are eligible for a special offer included in this newsletter\n\n**All Input Files** - all recipients will receive all non-template files in the input mapping"
+                "enum_titles": ["Table Column", "Single Input Table", "All Input Files and Tables"],
+                "tooltip": "**Table Column** - each recipient gets specific attachments defined in a column (JSON list of filenames)\n- example: personalized attachments per recipient\n\n**Single Input Table** - attach a CSV sample and/or link to a selected input table\n- example: send preview of processed data or link to full table in Storage\n\n**All Input Files** - all recipients receive all non-template files in the input mapping",
+                "grid_columns": 4
               }
             },
             "attachments_column": {
               "type": "string",
-              "title": "Attachments Column",
+              "title": "Data Column",
               "enum": [],
-              "description": "column expects json list of attachment filenames in input mapping, associated with specific recipients",
+              "description": "Column expects JSON list of attachment filenames in input mapping, associated with specific recipients.",
               "items": {
                 "enum": [],
                 "type": "string"
@@ -339,39 +377,164 @@
                   "action": "load_input_table_columns",
                   "autoload": ["parameters.advanced_options.email_data_table_name"]
                 },
-                "dependencies": {"attachments_source":  "from_table"}
+                "dependencies": {"attachments_source":  "from_table"},
+                "grid_columns": 8
+              }
+            },
+            "source_table": {
+              "type": "string",
+              "title": "Source Table",
+              "description": "Input table to use as data source.",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "enum": [],
+              "format": "select",
+              "uniqueItems": true,
+              "propertyOrder": 3,
+              "options": {
+                "async": {
+                  "label": "Re-load tables",
+                  "action": "load_input_table_selection",
+                  "autoload": []
+                },
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 8
+              }
+            },
+            "include_snapshot_link": {
+              "type": "boolean",
+              "title": "Include Link to Data Snapshot",
+              "description": "Uploads the source table to File Storage and includes a download link in the email body. The snapshot file expires after 15 days.",
+              "format": "checkbox",
+              "default": false,
+              "propertyOrder": 4,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
+              }
+            },
+            "include_csv_sample": {
+              "type": "boolean",
+              "title": "Include CSV Sample",
+              "description": "Include a CSV file with the first N rows from the source table.",
+              "format": "checkbox",
+              "default": true,
+              "propertyOrder": 5,
+              "options": {
+                "dependencies": {"attachments_source": "single_table"},
+                "grid_columns": 12
+              }
+            },
+            "sample_row_limit": {
+              "type": "integer",
+              "title": "Sample Row Limit",
+              "description": "Number of rows to include in sample (1-1000).",
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000,
+              "propertyOrder": 6,
+              "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 4
+              }
+            },
+            "sample_attachment_filename": {
+              "type": "string",
+              "title": "Sample Filename",
+              "description": "Filename for the CSV sample. Use {table_name} placeholder.",
+              "default": "{table_name}_sample.csv",
+              "propertyOrder": 7,
+              "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 8
+              }
+            },
+            "sort_enabled": {
+              "type": "boolean",
+              "title": "Sort Sample",
+              "format": "checkbox",
+              "default": false,
+              "propertyOrder": 8,
+              "options": {
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 12
+              }
+            },
+            "sort_order": {
+              "type": "string",
+              "title": "Order",
+              "enum": ["asc", "desc"],
+              "default": "asc",
+              "propertyOrder": 9,
+              "options": {
+                "enum_titles": ["Ascending", "Descending"],
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true, "sort_enabled": true},
+                "grid_columns": 4
+              }
+            },
+            "sort_column": {
+              "type": "string",
+              "title": "By Column",
+              "items": {
+                "enum": [],
+                "type": "string"
+              },
+              "enum": [],
+              "format": "select",
+              "uniqueItems": true,
+              "propertyOrder": 10,
+              "options": {
+                "async": {
+                  "label": "Re-load columns",
+                  "action": "load_source_table_columns",
+                  "autoload": ["parameters.advanced_options.attachments_config.source_table"]
+                },
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true, "sort_enabled": true},
+                "grid_columns": 8
+              }
+            },
+            "sample_info_text": {
+              "type": "string",
+              "title": "Sample Note",
+              "description": "Text appended to email body. Use {n} for sample rows, {total} for total rows.",
+              "default": "Attachment contains {n} of {total} records.",
+              "format": "textarea",
+              "propertyOrder": 11,
+              "options": {
+                "input_height": "100px",
+                "dependencies": {"attachments_source": "single_table", "include_csv_sample": true},
+                "grid_columns": 12
               }
             },
             "validate_attachments": {
               "type": "button",
               "format": "sync-action",
-              "description": "Validates All attachments are present in file input mapping (excluding the template files)",
-              "propertyOrder": 3,
+              "description": "Validates all attachments are present in file input mapping (excluding template files).",
+              "propertyOrder": 12,
               "options": {
                 "async": {
-                  "label": "VALIDATE ATTACHMENTS",
+                  "label": "Validate Attachments",
                   "action": "validate_attachments"
                 },
-                "dependencies": {"attachments_source":  "from_table"}
+                "dependencies": {"attachments_source":  "from_table"},
+                "grid_columns": 12
               }
-            }
-          },
-          "options": {
-            "dependencies": {
-              "include_attachments": true
             }
           }
         },
         "validate_config": {
           "type": "button",
           "format": "sync-action",
-          "description": "Validates the whole config",
-          "propertyOrder": 9,
+          "description": "Validates the whole config.",
+          "propertyOrder": 20,
           "options": {
             "async": {
-              "label": "VALIDATE CONFIG",
+              "label": "Validate Config",
               "action": "validate_config"
-            }
+            },
+            "grid_columns": 12
           }
         }
       }
@@ -380,7 +543,7 @@
       "type": "boolean",
       "format": "checkbox",
       "title": "Dry run",
-      "description": "if checked - only builds emails, but doesn't send them (it's useful because it will output results table containing what would be sent)",
+      "description": "If checked, only builds emails, but doesn't send them (useful because it will output results table containing what would be sent).",
       "default": false,
       "propertyOrder": 7
     },
@@ -388,7 +551,7 @@
       "type": "boolean",
       "format": "checkbox",
       "title": "Continue On Error",
-      "description": "if checked - component doesn't crash on invalid emails, but tries to send the rest of them",
+      "description": "If checked, component doesn't crash on invalid emails, but tries to send the rest of them.",
       "default": true,
       "propertyOrder": 8
     }

@@ -140,10 +140,22 @@ class AttachmentsConfig(ConfigurationBase):
     attachments_source:
     "all_input_files"
     "from_table" -> "attachments_column"
+    "single_table" -> "source_table", "include_csv_sample", "sample_row_limit", "sample_attachment_filename",
+                      "sample_info_text", "sort_enabled", "sort_column", "sort_order",
+                      "include_snapshot_link"
     """
 
     attachments_source: Union[str, None] = None
     attachments_column: Union[str, None] = None
+    source_table: Union[str, None] = None
+    include_csv_sample: bool = True
+    sample_row_limit: int = 100
+    sample_attachment_filename: str = "{table_name}_sample.csv"
+    sample_info_text: str = "Attachment contains {n} of {total} records."
+    sort_enabled: bool = False
+    sort_column: Union[str, None] = None
+    sort_order: str = "asc"
+    include_snapshot_link: bool = False
 
 
 @dataclass
