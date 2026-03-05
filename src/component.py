@@ -76,11 +76,18 @@ class Component(ComponentBase):
         self.html_template_path = None
 
     def run(self):
+        try:
+            self._run()
+        except Exception:
+            logging.exception("Unhandled exception in run()")
+            raise
+
+    def _run(self):
         self._validate_run_configuration()
         self.init_client()
 
         if self.cfg.configuration_type == "advanced":
-            validation_results = self.validate_config()
+            validation_results = self._validate_config()
             if validation_results.type == MessageType.DANGER:
                 raise UserException(validation_results.message)
 
@@ -739,9 +746,10 @@ class Component(ComponentBase):
         return template_text
 
     def _init_storage_client(self) -> StorageClient:
-        storage_token = self.environment_variables.token
-        storage_client = StorageClient(self.environment_variables.url, storage_token)
-        return storage_client
+        if not self.environment_variables.token or not self.environment_variables.url:
+            logging.warning("Storage API not available (missing token or URL), skipping storage client init.")
+            return None
+        return StorageClient(self.environment_variables.url, self.environment_variables.token)
 
     def _return_table_path(self, table_name: str) -> str:
         table_path = None
@@ -807,11 +815,9 @@ class Component(ComponentBase):
             # Load columns only if we have placeholders to validate
             columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
 
-            # If loading failed, we can't validate - return error (strict)
+            # If loading failed (e.g. Storage API unavailable), pass through as-is
             if isinstance(columns, ValidationResult):
-                return ValidationResult(
-                    "❌ Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
-                )
+                return columns
 
             # Validate placeholders against columns
             try:
@@ -857,7 +863,7 @@ class Component(ComponentBase):
             reader = csv.DictReader(StringIO(preview))
             return reader.fieldnames
         except Exception:
-            return ValidationResult("Couldn't fetch columns", MessageType.DANGER)
+            return ValidationResult("⚠️ Column validation skipped: Storage API not accessible.", MessageType.WARNING)
 
     @sync_action("load_input_table_columns")
     def load_input_table_columns(self) -> list[SelectElement]:
@@ -899,11 +905,9 @@ class Component(ComponentBase):
             # Load columns only if we have placeholders to validate
             columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
 
-            # If loading failed, we can't validate - return error (strict)
+            # If loading failed (e.g. Storage API unavailable), pass through as-is
             if isinstance(columns, ValidationResult):
-                return ValidationResult(
-                    "❌ Cannot validate placeholders: email data table is not accessible", MessageType.DANGER
-                )
+                return columns
 
             # Validate placeholders against columns
             try:
@@ -999,6 +1003,9 @@ class Component(ComponentBase):
 
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
+        return self._validate_config()
+
+    def _validate_config(self) -> ValidationResult:
         # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
         validation_methods = [
             self.test_smtp_server_connection_,
