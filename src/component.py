@@ -748,7 +748,7 @@ class Component(ComponentBase):
         if self.configuration.action == "run":
             all_tables = self.get_input_tables_definitions()
             for table in all_tables:
-                if table_name == table.name:
+                if table_name == Path(table.full_path).name:
                     table_path = table.full_path
                     break
 
