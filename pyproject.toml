@@ -17,13 +17,18 @@ dependencies = [
 dev = [
     "pytest>=9.0.2",
     "ruff>=0.15.0",
+    "pre-commit>=4.0.0",
+    "ty>=0.0.20",
 ]
 
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.lint]
-extend-select = ["I"]
+extend-select = [
+    "I",        # isort: import sorting
+    "PLR6301",  # pylint: method could be static
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
