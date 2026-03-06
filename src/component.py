@@ -734,6 +734,9 @@ class Component(ComponentBase):
         if message_body_source == "from_template_file":
             key_template_filename = KEY_PLAINTEXT_TEMPLATE_FILENAME if plaintext else KEY_HTML_TEMPLATE_FILENAME
             template_filename = message_body_config[key_template_filename]
+            label = "Plaintext template" if plaintext else "HTML template"
+            if not template_filename:
+                raise UserException(f"❌ {label} filename is not specified")
             files = self._list_files_in_sync_actions()
             if not files:
                 raise UserException(
@@ -806,12 +809,17 @@ class Component(ComponentBase):
         )
         if self.cfg.advanced_options.message_body_config.message_body_source == "from_table":
             table_name = self.cfg.advanced_options.email_data_table_name
+            if not table_name:
+                return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
             in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 return self._validate_templates_from_table(reader, plaintext)
         else:
-            template_text = self._read_template_text(plaintext)
+            try:
+                template_text = self._read_template_text(plaintext)
+            except UserException as e:
+                return ValidationResult(str(e), MessageType.DANGER)
 
             # Parse placeholders first
             template_placeholders = self._parse_template_placeholders(template_text)
@@ -896,6 +904,8 @@ class Component(ComponentBase):
             if not subject_column:
                 return ValidationResult("❌ Subject column is not specified", MessageType.DANGER)
             table_name = self.cfg.advanced_options.email_data_table_name
+            if not table_name:
+                return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
             in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
@@ -956,6 +966,8 @@ class Component(ComponentBase):
                 if not attachments_column:
                     return ValidationResult("❌ Attachments column is not specified", MessageType.DANGER)
                 table_name = self.cfg.advanced_options.email_data_table_name
+                if not table_name:
+                    return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
                 in_table_path = self._return_table_path(table_name)
                 expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
                 input_filenames = set([file["name"] for file in self._list_files_in_sync_actions()])
@@ -1020,6 +1032,10 @@ class Component(ComponentBase):
 
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
+        recipient_column = self.cfg.advanced_options.recipient_email_address_column
+        if not recipient_column:
+            return ValidationResult("❌ Recipient email address column is not specified", MessageType.DANGER)
+
         # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
         validation_methods = [
             self.test_smtp_server_connection_,
