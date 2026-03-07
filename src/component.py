@@ -49,8 +49,14 @@ RESULT_TABLE_COLUMNS = (
 
 VALID_CONNECTION_CONFIG_MESSAGE = "✅ Connection configuration is valid"
 VALID_SUBJECT_MESSAGE = "✅ All subject placeholders are present in the input table"
+VALID_SUBJECT_COLUMN_MESSAGE = "✅ Subject column exists in the input table"
+VALID_SUBJECT_NO_PLACEHOLDERS_MESSAGE = "✅ Subject has no placeholders to validate"
 VALID_PLAINTEXT_TEMPLATE_MESSAGE = "✅ All plaintext template placeholders are present in the input table"
+VALID_PLAINTEXT_TEMPLATE_COLUMN_MESSAGE = "✅ Plaintext template column exists in the input table"
+VALID_PLAINTEXT_TEMPLATE_NO_PLACEHOLDERS_MESSAGE = "✅ Plaintext template has no placeholders to validate"
 VALID_HTML_TEMPLATE_MESSAGE = "✅ All HTML template placeholders are present in the input table"
+VALID_HTML_TEMPLATE_COLUMN_MESSAGE = "✅ HTML template column exists in the input table"
+VALID_HTML_TEMPLATE_NO_PLACEHOLDERS_MESSAGE = "✅ HTML template has no placeholders to validate"
 VALID_ATTACHMENTS_MESSAGE = "✅ All attachments are present"
 
 general_error_row = {
@@ -334,12 +340,11 @@ class Component(ComponentBase):
         attachment_files = {}
         for name, files in in_files_by_name.items():
             file = files[0]
-            original_path = file.full_path
-            if original_path not in [self.plaintext_template_path, self.html_template_path]:
-                directory = os.path.split(original_path)[0]
-                new_path = os.path.join(directory, file.name)
-                Path.rename(original_path, new_path)
-                attachment_files[file.name] = new_path
+            original = Path(file.full_path)
+            if str(original) not in [self.plaintext_template_path, self.html_template_path]:
+                new = original.parent / file.name
+                original.rename(new)
+                attachment_files[file.name] = str(new)
         return attachment_files
 
     def load_attachment_paths_by_filename(self, in_tables, email_data_table_name, in_files_by_name):
@@ -581,6 +586,8 @@ class Component(ComponentBase):
 
     @staticmethod
     def _parse_template_placeholders(template_text: str) -> Set[str]:
+        if not template_text:
+            return set()
         placeholders = re.findall(r"\{\{.*?\}\}", template_text)
         placeholders = set([placeholder.strip("{}") for placeholder in placeholders])
         return placeholders
@@ -594,16 +601,16 @@ class Component(ComponentBase):
 
     def _get_attachments_filenames_from_table(self, in_table_path: str) -> Set[str]:
         attachments_filenames = set()
+        attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
         try:
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
-                attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
                 for row in reader:
                     for attachment_filename in json.loads(row[attachments_column]):
                         attachments_filenames.add(attachment_filename)
         except Exception as e:
             raise UserException(
-                f"Couldn't read attachments from table {in_table_path} column {attachments_column}: {str(e)}"
+                f"❌ Column '{attachments_column}' does not contain valid JSON attachment data: {str(e)}"
             )
         return attachments_filenames
 
@@ -705,15 +712,18 @@ class Component(ComponentBase):
         return missing_columns
 
     def _validate_templates_from_table(self, reader: csv.DictReader, plaintext: bool) -> ValidationResult:
-        message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
+        valid_column_message = (
+            VALID_PLAINTEXT_TEMPLATE_COLUMN_MESSAGE if plaintext else VALID_HTML_TEMPLATE_COLUMN_MESSAGE
+        )
         key_template_column = KEY_PLAINTEXT_TEMPLATE_COLUMN if plaintext else KEY_HTML_TEMPLATE_COLUMN
-        message_type = MessageType.SUCCESS
         template_column = self.cfg.advanced_options.message_body_config[key_template_column]
+        if not template_column:
+            label = "Plaintext template" if plaintext else "HTML template"
+            return ValidationResult(f"❌ {label} column is not specified", MessageType.DANGER)
         missing_columns = self._get_missing_columns_from_table(reader, template_column)
         if missing_columns:
-            message = "❌ Missing columns: " + ", ".join(missing_columns)
-            message_type = MessageType.DANGER
-        return ValidationResult(message, message_type)
+            return ValidationResult("❌ Missing columns: " + ", ".join(missing_columns), MessageType.DANGER)
+        return ValidationResult(valid_column_message, MessageType.SUCCESS)
 
     def _read_template_text(self, plaintext: bool = True) -> str:
         """Reads in template either from file, or from config"""
@@ -723,6 +733,9 @@ class Component(ComponentBase):
         if message_body_source == "from_template_file":
             key_template_filename = KEY_PLAINTEXT_TEMPLATE_FILENAME if plaintext else KEY_HTML_TEMPLATE_FILENAME
             template_filename = message_body_config[key_template_filename]
+            label = "Plaintext template" if plaintext else "HTML template"
+            if not template_filename:
+                raise UserException(f"❌ {label} filename is not specified")
             files = self._list_files_in_sync_actions()
             if not files:
                 raise UserException(
@@ -748,7 +761,7 @@ class Component(ComponentBase):
         if self.configuration.action == "run":
             all_tables = self.get_input_tables_definitions()
             for table in all_tables:
-                if table_name == table.name:
+                if table_name == Path(table.full_path).name:
                     table_path = table.full_path
                     break
 
@@ -788,21 +801,31 @@ class Component(ComponentBase):
 
     def _validate_template(self, plaintext: bool = True) -> ValidationResult:
         valid_message = VALID_PLAINTEXT_TEMPLATE_MESSAGE if plaintext else VALID_HTML_TEMPLATE_MESSAGE
+        no_placeholders_message = (
+            VALID_PLAINTEXT_TEMPLATE_NO_PLACEHOLDERS_MESSAGE
+            if plaintext
+            else VALID_HTML_TEMPLATE_NO_PLACEHOLDERS_MESSAGE
+        )
         if self.cfg.advanced_options.message_body_config.message_body_source == "from_table":
             table_name = self.cfg.advanced_options.email_data_table_name
+            if not table_name:
+                return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
             in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
                 return self._validate_templates_from_table(reader, plaintext)
         else:
-            template_text = self._read_template_text(plaintext)
+            try:
+                template_text = self._read_template_text(plaintext)
+            except UserException as e:
+                return ValidationResult(str(e), MessageType.DANGER)
 
             # Parse placeholders first
             template_placeholders = self._parse_template_placeholders(template_text)
 
             # If no placeholders, validation passes immediately
             if not template_placeholders:
-                return ValidationResult(valid_message, MessageType.SUCCESS)
+                return ValidationResult(no_placeholders_message, MessageType.SUCCESS)
 
             # Load columns only if we have placeholders to validate
             columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
@@ -877,7 +900,11 @@ class Component(ComponentBase):
         subject_config = self.cfg.advanced_options.subject_config
         if subject_config.subject_source == "from_table":
             subject_column = subject_config.subject_column
+            if not subject_column:
+                return ValidationResult("❌ Subject column is not specified", MessageType.DANGER)
             table_name = self.cfg.advanced_options.email_data_table_name
+            if not table_name:
+                return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
             in_table_path = self._return_table_path(table_name)
             with open(in_table_path) as in_table:
                 reader = csv.DictReader(in_table)
@@ -885,7 +912,7 @@ class Component(ComponentBase):
                 if missing_columns:
                     message = "❌ Missing columns: " + ", ".join(missing_columns)
                     return ValidationResult(message, MessageType.DANGER)
-                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+                return ValidationResult(VALID_SUBJECT_COLUMN_MESSAGE, MessageType.SUCCESS)
         else:
             subject_template_text = subject_config.subject_template_definition
 
@@ -894,7 +921,7 @@ class Component(ComponentBase):
 
             # If no placeholders, validation passes immediately
             if not template_placeholders:
-                return ValidationResult(VALID_SUBJECT_MESSAGE, MessageType.SUCCESS)
+                return ValidationResult(VALID_SUBJECT_NO_PLACEHOLDERS_MESSAGE, MessageType.SUCCESS)
 
             # Load columns only if we have placeholders to validate
             columns = self._load_table_columns(self.cfg.advanced_options.email_data_table_name, "Email Data Table Name")
@@ -934,7 +961,12 @@ class Component(ComponentBase):
         message = VALID_ATTACHMENTS_MESSAGE
         try:
             if self.cfg.advanced_options.attachments_config.attachments_source == "from_table":
+                attachments_column = self.cfg.advanced_options.attachments_config.attachments_column
+                if not attachments_column:
+                    return ValidationResult("❌ Attachments column is not specified", MessageType.DANGER)
                 table_name = self.cfg.advanced_options.email_data_table_name
+                if not table_name:
+                    return ValidationResult("❌ Email data table is not specified", MessageType.DANGER)
                 in_table_path = self._return_table_path(table_name)
                 expected_input_filenames = self._get_attachments_filenames_from_table(in_table_path)
                 input_filenames = set([file["name"] for file in self._list_files_in_sync_actions()])
@@ -999,6 +1031,10 @@ class Component(ComponentBase):
 
     @sync_action("validate_config")
     def validate_config(self) -> ValidationResult:
+        recipient_column = self.cfg.advanced_options.recipient_email_address_column
+        if not recipient_column:
+            return ValidationResult("❌ Recipient email address column is not specified", MessageType.DANGER)
+
         # TODO: once sys.stdout is None handling is released, remove helper methods and use other sync actions directly
         validation_methods = [
             self.test_smtp_server_connection_,
