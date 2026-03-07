@@ -447,6 +447,111 @@ class TestLoadAttachmentTables:
         assert result["email_basis.csv"] == "/data/in/tables/email_basis.csv"
 
 
+# ==================== Tests for _load_attachment_files() ====================
+
+
+class TestLoadAttachmentFiles:
+    """Tests for the _load_attachment_files() method.
+
+    The method renames each input file from its hashed storage path
+    (e.g. /data/in/files/12345_invoice.pdf) to its human-readable name
+    (e.g. /data/in/files/invoice.pdf) and returns a {filename: new_path} dict.
+
+    BUG REPRODUCED (Keboola error: "Error loading attachments: 'str' object has no
+    attribute 'with_segments'"):
+    The original code called Path.rename(original_path, new_path) where both
+    arguments are plain strings. In Python 3.12+, Path.rename() called as a
+    class method requires a Path as its first argument (self), not a str.
+    Fix: Path(original_path).rename(new_path) — instantiate first, then rename.
+    """
+
+    def _make_component(self, plaintext_template_path=None, html_template_path=None):
+        """Build a minimal Component with template path attributes set."""
+        comp = Component.__new__(Component)
+        comp.plaintext_template_path = plaintext_template_path
+        comp.html_template_path = html_template_path
+        return comp
+
+    def _make_file_mock(self, full_path: str, name: str):
+        """Build a file definition mock matching keboola.component's FileDefinition API."""
+        f = MagicMock()
+        f.full_path = full_path
+        f.name = name
+        return f
+
+    def test_renames_files_and_returns_dict(self, tmp_path):
+        """
+        REGRESSION: reproduces "Error loading attachments: 'str' object has no
+        attribute 'with_segments'" from Keboola.
+
+        Path.rename(str, str) fails in Python 3.12+ because the class-method form
+        requires a Path instance as self, not a plain string. The fix is
+        Path(original_path).rename(new_path).
+        """
+        # Create a real file with a hashed storage name (as Keboola downloads it)
+        hashed = tmp_path / "12345_invoice_2024_q4.pdf"
+        hashed.write_bytes(b"%PDF placeholder")
+
+        expected_new_path = str(tmp_path / "invoice_2024_q4.pdf")
+
+        file_mock = self._make_file_mock(str(hashed), "invoice_2024_q4.pdf")
+        comp = self._make_component()
+
+        result = comp._load_attachment_files({"invoice_2024_q4.pdf": [file_mock]})
+
+        assert result == {"invoice_2024_q4.pdf": expected_new_path}
+        assert not hashed.exists(), "original hashed file should be gone after rename"
+        assert (tmp_path / "invoice_2024_q4.pdf").exists(), "renamed file should exist"
+
+    def test_multiple_files_all_renamed(self, tmp_path):
+        """All input files (except templates) are renamed and returned."""
+        files_data = [
+            ("11111_invoice_2024_q4.pdf", "invoice_2024_q4.pdf"),
+            ("22222_service_agreement.pdf", "service_agreement.pdf"),
+            ("33333_quarterly_report.xlsx", "quarterly_report.xlsx"),
+        ]
+        in_files_by_name = {}
+        for hashed_name, clean_name in files_data:
+            path = tmp_path / hashed_name
+            path.write_bytes(b"content")
+            in_files_by_name[clean_name] = [self._make_file_mock(str(path), clean_name)]
+
+        comp = self._make_component()
+        result = comp._load_attachment_files(in_files_by_name)
+
+        assert set(result.keys()) == {"invoice_2024_q4.pdf", "service_agreement.pdf", "quarterly_report.xlsx"}
+        for clean_name in result:
+            assert (tmp_path / clean_name).exists()
+
+    def test_template_files_excluded(self, tmp_path):
+        """Files matching plaintext_template_path or html_template_path are skipped."""
+        plaintext_hashed = tmp_path / "99999_template.txt"
+        plaintext_hashed.write_text("Dear {{name}}")
+        attachment_hashed = tmp_path / "44444_invoice.pdf"
+        attachment_hashed.write_bytes(b"data")
+
+        plaintext_mock = self._make_file_mock(str(plaintext_hashed), "template.txt")
+        attachment_mock = self._make_file_mock(str(attachment_hashed), "invoice.pdf")
+
+        comp = self._make_component(plaintext_template_path=str(plaintext_hashed))
+
+        result = comp._load_attachment_files(
+            {
+                "template.txt": [plaintext_mock],
+                "invoice.pdf": [attachment_mock],
+            }
+        )
+
+        assert "template.txt" not in result, "template file must be excluded"
+        assert "invoice.pdf" in result
+
+    def test_empty_input_returns_empty_dict(self):
+        """No input files → empty result, no error."""
+        comp = self._make_component()
+        result = comp._load_attachment_files({})
+        assert result == {}
+
+
 # ==================== Tests for _return_table_path() ====================
 
 
