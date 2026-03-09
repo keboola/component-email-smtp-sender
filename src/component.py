@@ -36,6 +36,8 @@ KEY_DISABLE_ATTACHMENTS = "disable_attachments"
 
 SLEEP_INTERVAL = 0.1
 
+VALID_ATTACHMENT_SOURCES = ("all_input_files", "from_table", "single_table")
+
 RESULT_TABLE_COLUMNS = (
     "status",
     "recipient_email_address",
@@ -215,13 +217,14 @@ class Component(ComponentBase):
         if self.cfg.configuration_type == "basic":
             return
 
-        # Validate attachment source is a recognized value (early check)
+        # Validate attachment source is a recognized value (early check).
+        # Falsy value (None, empty string) means the user never configured attachments — silently skip.
         if self.cfg.advanced_options.include_attachments:
             attachments_source = self.cfg.advanced_options.attachments_config.attachments_source
-            if attachments_source not in ("from_table", "single_table", "all_input_files"):
+            if attachments_source and attachments_source not in VALID_ATTACHMENT_SOURCES:
                 raise UserException(
                     f"Unknown attachment source: '{attachments_source}'. "
-                    f"Valid options: 'from_table', 'single_table', 'all_input_files'"
+                    f"Valid options: {', '.join(repr(s) for s in VALID_ATTACHMENT_SOURCES)}"
                 )
 
         # Validate single table mode configuration
@@ -1049,15 +1052,17 @@ class Component(ComponentBase):
         if self.cfg.advanced_options.include_attachments and not disable_attachments:
             attachments_source = self.cfg.advanced_options.attachments_config.attachments_source
 
-            # Early return for unrecognized attachment source values (e.g., legacy configs)
-            if attachments_source not in ("from_table", "single_table", "all_input_files"):
+            if not attachments_source:
+                # Falsy value (None, empty string) means never configured — silently skip
+                pass
+            elif attachments_source not in VALID_ATTACHMENT_SOURCES:
+                # Unrecognized value (e.g., typo or future enum value) — surface as error
                 return ValidationResult(
                     f"❌ Unknown attachment source: '{attachments_source}'. "
-                    f"Valid options: 'from_table', 'single_table', 'all_input_files'",
+                    f"Valid options: {', '.join(repr(s) for s in VALID_ATTACHMENT_SOURCES)}",
                     MessageType.DANGER,
                 )
-
-            if attachments_source == "single_table":
+            elif attachments_source == "single_table":
                 validation_methods.append(self.validate_single_table_)
             elif attachments_source == "from_table":
                 validation_methods.append(self.validate_attachments_)

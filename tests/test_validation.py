@@ -362,9 +362,38 @@ class TestValidateRunConfiguration:
         )
         with pytest.raises(
             UserException,
-            match="Unknown attachment source: 'data_preview'. Valid options: 'from_table', 'single_table', 'all_input_files'",
+            match="Unknown attachment source: 'data_preview'. Valid options: 'all_input_files', 'from_table', 'single_table'",
         ):
             component._validate_run_configuration()
+
+    @pytest.mark.parametrize(
+        "advanced_options",
+        [
+            # attachments_source missing, include_attachments defaulting to True (498 legacy rows in production)
+            pytest.param({}, id="both_missing_all_defaults"),
+            # attachments_source explicitly None
+            pytest.param({"attachments_config": {"attachments_source": None}}, id="attachments_source_none"),
+            # attachments_source empty string (defensive — falsy non-None)
+            pytest.param({"attachments_config": {"attachments_source": ""}}, id="attachments_source_empty_string"),
+            # include_attachments explicitly True, attachments_source missing (the regression case)
+            pytest.param({"include_attachments": True}, id="include_attachments_true_source_missing"),
+            # include_attachments explicitly True, attachments_source explicitly None
+            pytest.param(
+                {"include_attachments": True, "attachments_config": {"attachments_source": None}},
+                id="include_attachments_true_source_none",
+            ),
+        ],
+    )
+    def test_falsy_attachments_source_does_not_raise(self, component, advanced_options):
+        """Falsy attachments_source (None, empty string, missing) must be silently ignored.
+
+        498 production rows have include_attachments missing (defaults True) but a valid attachments_source set,
+        so the True default is intentional for backwards compatibility. However, 58 rows have BOTH missing —
+        those must not crash. Our regression: deploying strict 'Unknown attachment source: None' validation
+        broke customer projects that had been running successfully without attachments configured.
+        """
+        component.cfg = Configuration.load_from_dict(make_advanced_config(advanced_options=advanced_options))
+        component._validate_run_configuration()  # must not raise
 
 
 # ==================== Tests for _resolve_data_source_table_path() ====================
@@ -1363,6 +1392,33 @@ class TestValidateConfig:
 
         assert result.type.name == "ERROR"
         assert "❌ Unknown attachment source: 'data_preview'" in result.message
+        comp.validate_attachments_.assert_not_called()
+        comp.validate_single_table_.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "advanced_options",
+        [
+            pytest.param({}, id="both_missing_all_defaults"),
+            pytest.param({"attachments_config": {"attachments_source": None}}, id="attachments_source_none"),
+            pytest.param({"attachments_config": {"attachments_source": ""}}, id="attachments_source_empty_string"),
+            pytest.param({"include_attachments": True}, id="include_attachments_true_source_missing"),
+            pytest.param(
+                {"include_attachments": True, "attachments_config": {"attachments_source": None}},
+                id="include_attachments_true_source_none",
+            ),
+        ],
+    )
+    def test_falsy_attachments_source_skips_attachment_validators(self, advanced_options):
+        """Falsy attachments_source → attachment validators not called, validate_config succeeds.
+
+        Mirrors test_falsy_attachments_source_does_not_raise but for the dry-run/sync-action path.
+        Customer projects running advanced mode without attachments configured all hit this code path.
+        """
+        config = make_advanced_config(advanced_options=advanced_options)
+        with make_component_for_validate_config(config) as comp:
+            result = comp.validate_config()
+
+        assert result.type.name == "SUCCESS"
         comp.validate_attachments_.assert_not_called()
         comp.validate_single_table_.assert_not_called()
 
