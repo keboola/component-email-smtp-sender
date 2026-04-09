@@ -240,18 +240,10 @@ class SMTPClient:
             UserException: If the email does not match any of the masks in the whitelist.
 
         """
-        emails = [email.strip()]
+        email = email.strip()
+        for mask in self.address_whitelist:
+            escaped = re.escape(mask).replace(r"\*", ".*")
+            if re.match(rf"^{escaped}$", email):
+                return
 
-        for email in emails:
-            matched = False
-            for mask in self.address_whitelist:
-                _mask = re.escape(mask).replace(r"\*", ".*")
-
-                pattern = rf"^{_mask}$"
-
-                if re.match(pattern, email):
-                    matched = True
-                    break
-
-            if not matched:
-                raise UserException(f"Email '{email}' does not match any of the allowed masks.")
+        raise UserException(f"Email '{email}' does not match any of the allowed masks.")

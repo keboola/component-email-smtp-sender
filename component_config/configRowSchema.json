@@ -21,7 +21,7 @@
           "title": "Recipient Email Addresses",
           "type": "string",
           "options": {
-            "tooltip": "Enter comma-delimited list of recipient email addresses (each address receives a separate email). Use semicolons to send a single email to multiple recipients (e.g. a@x.com;b@x.com)."
+            "tooltip": "Enter comma delimited list of recipient email addresses"
           },
           "propertyOrder": 1
         },
