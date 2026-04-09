@@ -27,6 +27,22 @@ class SMTPClient:
     Client for sending emails
     """
 
+    @staticmethod
+    def _parse_recipient_addresses(recipient_string: str) -> List[str]:
+        """
+        Parse a recipient string that may contain multiple email addresses
+        separated by commas or semicolons into a list of individual addresses.
+
+        Args:
+            recipient_string: Raw recipient string, e.g. "a@x.com; b@x.com, c@x.com"
+
+        Returns:
+            List of individual stripped email addresses, e.g. ["a@x.com", "b@x.com", "c@x.com"]
+        """
+        # Split by both semicolons and commas
+        addresses = re.split(r"[;,]", recipient_string)
+        return [addr.strip() for addr in addresses if addr.strip()]
+
     def __init__(
         self,
         sender_email_address: str,
@@ -100,14 +116,24 @@ class SMTPClient:
         attachments_paths_by_filename: Dict[str, str] = None,
     ) -> MIMEMultipart:
         """
-        Prepares email message including html version (if selected) and adds attachments (if they exist)
+        Prepares email message including html version (if selected) and adds attachments (if they exist).
+
+        Supports multiple recipients separated by commas or semicolons.
+        When multiple addresses are provided, they are all included in the To header
+        as a comma-separated list (per RFC 2822) so a single email is sent to all recipients.
         """
+        parsed_addresses = self._parse_recipient_addresses(recipient_email_address)
+
         if self.address_whitelist:
-            self.check_email_mask(recipient_email_address)
+            for addr in parsed_addresses:
+                self.check_email_mask(addr)
+
+        # Format To header as comma-separated list per RFC 2822
+        formatted_to = ", ".join(parsed_addresses)
 
         email_ = MIMEMultipart("mixed")
         email_["From"] = self.sender_email_address
-        email_["To"] = recipient_email_address
+        email_["To"] = formatted_to
         email_["Subject"] = subject
 
         email_message = MIMEMultipart("alternative")
@@ -188,7 +214,11 @@ class SMTPClient:
         **kwargs,
     ) -> None:
         email_ = self.smtp_server.new_message(resource=self.sender_email_address)
-        email_.to.add(email["To"])
+
+        # Add each recipient individually so O365/Microsoft Graph API handles them correctly
+        for addr in self._parse_recipient_addresses(email["To"]):
+            email_.to.add(addr)
+
         email_.subject = email["Subject"]
         email_.body = html_message_body if html_message_body is not None else message_body
 
@@ -199,19 +229,18 @@ class SMTPClient:
 
     def check_email_mask(self, email: str) -> None:
         """
-        Checks whether the provided email or a comma-separated list of emails matches any of the
-        patterns (masks) in the address whitelist. The masks may contain '*' as a wildcard character,
-        which is translated into a regex pattern to match zero or more characters.
+        Checks whether the provided email matches any of the patterns (masks) in the address
+        whitelist. The masks may contain '*' as a wildcard character, which is translated into
+        a regex pattern to match zero or more characters.
 
         Args:
-            email (str): The email address or a comma-separated list of email addresses
-                         to be checked against the whitelist.
+            email (str): A single email address to be checked against the whitelist.
 
         Raises:
-            UserException: If any of the emails do not match any of the masks in the whitelist.
+            UserException: If the email does not match any of the masks in the whitelist.
 
         """
-        emails = [e.strip() for e in email.split(",")]
+        emails = [email.strip()]
 
         for email in emails:
             matched = False
