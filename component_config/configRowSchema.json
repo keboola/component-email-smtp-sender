@@ -20,8 +20,9 @@
         "recipient_email_addresses": {
           "title": "Recipient Email Addresses",
           "type": "string",
+          "description": "Use commas to send a separate email to each address. Use semicolons to send one email to all addresses at once.",
           "options": {
-            "tooltip": "Enter comma delimited list of recipient email addresses"
+            "tooltip": "**Comma** (`,`) — each address receives its own individual email\n- example: `a@company.com, b@company.com` → 2 separate emails\n\n**Semicolon** (`;`) — all addresses are grouped into a single email (visible in the To field)\n- example: `a@company.com; b@company.com` → 1 email to both"
           },
           "propertyOrder": 1
         },
@@ -86,6 +87,7 @@
         "recipient_email_address_column": {
           "type": "string",
           "title": "Recipient Column",
+          "description": "Each row sends one email. Use semicolons within a cell to send one email to multiple recipients.",
           "items": {
             "enum": [],
             "type": "string"
