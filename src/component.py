@@ -401,7 +401,13 @@ class Component(ComponentBase):
                     self._validate_template_text(html_template_text, columns)
         else:
             try:
-                reader = iter(basic_options.recipient_email_addresses.split(","))
+                if self.cfg.send_to_all_recipients:
+                    # Single email to all recipients: pass all addresses as one string
+                    reader = iter([basic_options.recipient_email_addresses])
+                else:
+                    # Separate emails: split by both commas and semicolons
+                    addresses = re.split(r"[,;]", basic_options.recipient_email_addresses)
+                    reader = iter([addr.strip() for addr in addresses if addr.strip()])
             except AttributeError:
                 raise UserException("No input table found with specified name or no recipient email addresses provided")
 
@@ -487,6 +493,7 @@ class Component(ComponentBase):
                     attachments_paths_by_filename=custom_attachments_paths_by_filename,
                     rendered_plaintext_message=rendered_plaintext_message,
                     rendered_html_message=rendered_html_message,
+                    parse_multiple_recipients=self.cfg.send_to_all_recipients,
                 )
 
                 status = "OK"

@@ -1,9 +1,9 @@
 """
-Tests for multi-recipient email support.
+Tests for multi-recipient email support via the send_to_all_recipients checkbox.
 
 Covers:
 - SMTPClient._parse_recipient_addresses() static method
-- SMTPClient.build_email() with multiple recipients
+- SMTPClient.build_email() with parse_multiple_recipients flag
 - SMTPClient.check_email_mask() with single address (after refactor)
 - SMTPClient.send_email_via_o365_oauth() with multiple recipients
 """
@@ -54,7 +54,7 @@ class TestParseRecipientAddresses:
         assert result == ["a@x.com", "b@x.com", "c@x.com"]
 
     def test_mixed_separators(self):
-        """Mix of commas and semicolons should be split correctly."""
+        """Mix of commas and semicolons should all be treated identically as separators."""
         result = SMTPClient._parse_recipient_addresses("a@x.com, b@x.com; c@x.com")
         assert result == ["a@x.com", "b@x.com", "c@x.com"]
 
@@ -79,14 +79,14 @@ class TestParseRecipientAddresses:
         assert result == ["user@example.com"]
 
 
-# ==================== Tests for build_email with multiple recipients ====================
+# ==================== Tests for build_email with parse_multiple_recipients flag ====================
 
 
 class TestBuildEmailMultiRecipient:
-    """Tests for build_email() with multiple recipients."""
+    """Tests for build_email() with the parse_multiple_recipients flag."""
 
-    def test_single_recipient_to_header(self):
-        """Single recipient should produce a simple To header."""
+    def test_single_recipient_default(self):
+        """Single recipient with default flag should produce a simple To header."""
         client = _make_client()
         email = client.build_email(
             recipient_email_address="user@example.com",
@@ -95,55 +95,71 @@ class TestBuildEmailMultiRecipient:
         )
         assert email["To"] == "user@example.com"
 
-    def test_semicolon_separated_to_header(self):
-        """Semicolon-separated recipients should produce comma-separated To header (RFC 2822)."""
+    def test_flag_false_does_not_parse(self):
+        """With parse_multiple_recipients=False, multi-address string is used as-is (single recipient)."""
         client = _make_client()
         email = client.build_email(
             recipient_email_address="a@x.com; b@x.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=False,
+        )
+        # The whole string is treated as one recipient (not parsed)
+        assert email["To"] == "a@x.com; b@x.com"
+
+    def test_flag_true_parses_semicolons(self):
+        """With parse_multiple_recipients=True, semicolons are parsed into separate recipients."""
+        client = _make_client()
+        email = client.build_email(
+            recipient_email_address="a@x.com; b@x.com",
+            subject="Test",
+            rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
         assert email["To"] == "a@x.com, b@x.com"
 
-    def test_comma_separated_to_header(self):
-        """Comma-separated recipients should produce comma-separated To header."""
+    def test_flag_true_parses_commas(self):
+        """With parse_multiple_recipients=True, commas are parsed into separate recipients."""
         client = _make_client()
         email = client.build_email(
             recipient_email_address="a@x.com, b@x.com, c@x.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
         assert email["To"] == "a@x.com, b@x.com, c@x.com"
 
-    def test_mixed_separators_to_header(self):
-        """Mixed separators should all result in comma-separated To header."""
+    def test_flag_true_parses_mixed_separators(self):
+        """With parse_multiple_recipients=True, mixed separators are all treated the same."""
         client = _make_client()
         email = client.build_email(
             recipient_email_address="a@x.com; b@x.com, c@x.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
         assert email["To"] == "a@x.com, b@x.com, c@x.com"
 
-    def test_whitelist_checks_each_address_individually(self):
-        """With whitelist enabled, each parsed address should be checked individually."""
+    def test_flag_true_whitelist_checks_each_address(self):
+        """With parse_multiple_recipients=True and whitelist, each address is checked individually."""
         client = _make_client(address_whitelist=["*@allowed.com"])
-        # All addresses allowed
         email = client.build_email(
             recipient_email_address="a@allowed.com; b@allowed.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
         assert email["To"] == "a@allowed.com, b@allowed.com"
 
-    def test_whitelist_rejects_disallowed_address_in_multi_recipient(self):
-        """With whitelist enabled, a disallowed address in a multi-recipient string should raise."""
+    def test_flag_true_whitelist_rejects_disallowed(self):
+        """With parse_multiple_recipients=True and whitelist, a disallowed address raises."""
         client = _make_client(address_whitelist=["*@allowed.com"])
         with pytest.raises(UserException, match="does not match any of the allowed masks"):
             client.build_email(
                 recipient_email_address="a@allowed.com; b@forbidden.com",
                 subject="Test",
                 rendered_plaintext_message="Body",
+                parse_multiple_recipients=True,
             )
 
     def test_from_and_subject_preserved(self):
@@ -153,6 +169,7 @@ class TestBuildEmailMultiRecipient:
             recipient_email_address="a@x.com; b@x.com",
             subject="Important Subject",
             rendered_plaintext_message="Body text",
+            parse_multiple_recipients=True,
         )
         assert email["From"] == "sender@example.com"
         assert email["Subject"] == "Important Subject"
@@ -214,18 +231,18 @@ class TestO365MultiRecipient:
         mock_message.to.add.assert_called_once_with("user@example.com")
 
     def test_multiple_recipients_added_individually(self):
-        """Multiple recipients should each be added individually via to.add()."""
+        """With parse_multiple_recipients=True, each recipient is added individually via to.add()."""
         client = _make_client()
         mock_message = MagicMock()
         mock_account = MagicMock()
         mock_account.new_message.return_value = mock_message
         client.smtp_server = mock_account
 
-        # Build an email with multiple recipients (semicolon-separated)
         email = client.build_email(
             recipient_email_address="a@x.com; b@x.com; c@x.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
 
         client.send_email_via_o365_oauth(email, message_body="Body", attachments_paths=[])
@@ -246,6 +263,7 @@ class TestO365MultiRecipient:
             recipient_email_address="a@x.com; b@x.com",
             subject="Test",
             rendered_plaintext_message="Body",
+            parse_multiple_recipients=True,
         )
 
         client.send_email_via_o365_oauth(email, message_body="Body", attachments_paths=[])

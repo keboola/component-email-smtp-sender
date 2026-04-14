@@ -114,15 +114,20 @@ class SMTPClient:
         rendered_plaintext_message: str,
         rendered_html_message: Union[str, None] = None,
         attachments_paths_by_filename: Dict[str, str] = None,
+        parse_multiple_recipients: bool = False,
     ) -> MIMEMultipart:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist).
 
-        Supports multiple recipients separated by commas or semicolons.
-        When multiple addresses are provided, they are all included in the To header
-        as a comma-separated list (per RFC 2822) so a single email is sent to all recipients.
+        When parse_multiple_recipients is True, the recipient_email_address string is parsed for
+        comma/semicolon-separated addresses and all are included in the To header as a
+        comma-separated list (per RFC 2822) so a single email is sent to all recipients.
+        When False (default), the string is used as-is for a single recipient.
         """
-        parsed_addresses = self._parse_recipient_addresses(recipient_email_address)
+        if parse_multiple_recipients:
+            parsed_addresses = self._parse_recipient_addresses(recipient_email_address)
+        else:
+            parsed_addresses = [recipient_email_address.strip()]
 
         if self.address_whitelist:
             for addr in parsed_addresses:
