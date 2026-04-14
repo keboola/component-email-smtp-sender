@@ -20,7 +20,6 @@
         "recipient_email_addresses": {
           "title": "Recipient Email Addresses",
           "type": "string",
-          "description": "Separate multiple addresses with commas or semicolons.",
           "options": {
             "tooltip": "Enter one or more email addresses separated by commas or semicolons.\nUse the **Send to All Recipients** checkbox to control whether they receive one shared email or individual separate emails."
           },
@@ -87,7 +86,6 @@
         "recipient_email_address_column": {
           "type": "string",
           "title": "Recipient Column",
-          "description": "Column containing recipient email address(es). Use commas or semicolons to list multiple addresses per row.",
           "items": {
             "enum": [],
             "type": "string"
