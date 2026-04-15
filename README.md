@@ -1,6 +1,6 @@
 # SMTP Sender Application
 
-- Component enabling users to send emails with custom subject, message body and attachments from keboola platform
+- Component enabling users to send emails with custom subject, message body and attachments via their own SMTP server or Microsoft 365 from within the Keboola platform
 
 ## Config fields
 
