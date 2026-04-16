@@ -176,3 +176,4 @@ class Configuration(ConfigurationBase):
     advanced_options: AdvancedEmailOptions = dataclasses.field(default_factory=lambda: ConfigTree({}))
     continue_on_error: bool = True
     dry_run: bool = False
+    send_to_all_recipients: bool = False

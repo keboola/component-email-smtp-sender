@@ -27,6 +27,22 @@ class SMTPClient:
     Client for sending emails
     """
 
+    @staticmethod
+    def _parse_recipient_addresses(recipient_string: str) -> List[str]:
+        """
+        Parse a recipient string that may contain multiple email addresses
+        separated by commas or semicolons into a list of individual addresses.
+
+        Args:
+            recipient_string: Raw recipient string, e.g. "a@x.com; b@x.com, c@x.com"
+
+        Returns:
+            List of individual stripped email addresses, e.g. ["a@x.com", "b@x.com", "c@x.com"]
+        """
+        # Split by both semicolons and commas
+        addresses = re.split(r"[;,]", recipient_string)
+        return [addr.strip() for addr in addresses if addr.strip()]
+
     def __init__(
         self,
         sender_email_address: str,
@@ -98,16 +114,31 @@ class SMTPClient:
         rendered_plaintext_message: str,
         rendered_html_message: Union[str, None] = None,
         attachments_paths_by_filename: Dict[str, str] = None,
+        parse_multiple_recipients: bool = False,
     ) -> MIMEMultipart:
         """
-        Prepares email message including html version (if selected) and adds attachments (if they exist)
+        Prepares email message including html version (if selected) and adds attachments (if they exist).
+
+        When parse_multiple_recipients is True, the recipient_email_address string is parsed for
+        comma/semicolon-separated addresses and all are included in the To header as a
+        comma-separated list (per RFC 2822) so a single email is sent to all recipients.
+        When False (default), the string is used as-is for a single recipient.
         """
+        if parse_multiple_recipients:
+            parsed_addresses = self._parse_recipient_addresses(recipient_email_address)
+        else:
+            parsed_addresses = [recipient_email_address.strip()]
+
         if self.address_whitelist:
-            self.check_email_mask(recipient_email_address)
+            for addr in parsed_addresses:
+                self.check_email_mask(addr)
+
+        # Format To header as comma-separated list per RFC 2822
+        formatted_to = ", ".join(parsed_addresses)
 
         email_ = MIMEMultipart("mixed")
         email_["From"] = self.sender_email_address
-        email_["To"] = recipient_email_address
+        email_["To"] = formatted_to
         email_["Subject"] = subject
 
         email_message = MIMEMultipart("alternative")
@@ -188,7 +219,11 @@ class SMTPClient:
         **kwargs,
     ) -> None:
         email_ = self.smtp_server.new_message(resource=self.sender_email_address)
-        email_.to.add(email["To"])
+
+        # Add each recipient individually so O365/Microsoft Graph API handles them correctly
+        for addr in self._parse_recipient_addresses(email["To"]):
+            email_.to.add(addr)
+
         email_.subject = email["Subject"]
         email_.body = html_message_body if html_message_body is not None else message_body
 
@@ -199,30 +234,21 @@ class SMTPClient:
 
     def check_email_mask(self, email: str) -> None:
         """
-        Checks whether the provided email or a comma-separated list of emails matches any of the
-        patterns (masks) in the address whitelist. The masks may contain '*' as a wildcard character,
-        which is translated into a regex pattern to match zero or more characters.
+        Checks whether the provided email matches any of the patterns (masks) in the address
+        whitelist. The masks may contain '*' as a wildcard character, which is translated into
+        a regex pattern to match zero or more characters.
 
         Args:
-            email (str): The email address or a comma-separated list of email addresses
-                         to be checked against the whitelist.
+            email (str): A single email address to be checked against the whitelist.
 
         Raises:
-            UserException: If any of the emails do not match any of the masks in the whitelist.
+            UserException: If the email does not match any of the masks in the whitelist.
 
         """
-        emails = [e.strip() for e in email.split(",")]
+        email = email.strip()
+        for mask in self.address_whitelist:
+            escaped = re.escape(mask).replace(r"\*", ".*")
+            if re.match(rf"^{escaped}$", email):
+                return
 
-        for email in emails:
-            matched = False
-            for mask in self.address_whitelist:
-                _mask = re.escape(mask).replace(r"\*", ".*")
-
-                pattern = rf"^{_mask}$"
-
-                if re.match(pattern, email):
-                    matched = True
-                    break
-
-            if not matched:
-                raise UserException(f"Email '{email}' does not match any of the allowed masks.")
+        raise UserException(f"Email '{email}' does not match any of the allowed masks.")

@@ -21,7 +21,7 @@
           "title": "Recipient Email Addresses",
           "type": "string",
           "options": {
-            "tooltip": "Enter comma delimited list of recipient email addresses"
+            "tooltip": "Enter one or more email addresses separated by commas or semicolons.\nUse the **Send to All Recipients** checkbox to control whether they receive one shared email or individual separate emails."
           },
           "propertyOrder": 1
         },
@@ -538,6 +538,14 @@
           }
         }
       }
+    },
+    "send_to_all_recipients": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Send to All Recipients in Single Email",
+      "description": "If checked, all recipient addresses (separated by commas or semicolons) are grouped into a single email with all recipients visible in the To field. If unchecked (default), each address receives its own separate email.",
+      "default": false,
+      "propertyOrder": 6
     },
     "dry_run": {
       "type": "boolean",
