@@ -25,8 +25,14 @@
           },
           "propertyOrder": 1
         },
+        "cc_email_addresses": {
+          "title": "CC Email Addresses",
+          "type": "string",
+          "description": "Optional. Comma or semicolon separated list of CC recipients. These addresses receive a copy of every email sent from this configuration.",
+          "propertyOrder": 2
+        },
         "subject": {
-          "propertyOrder": 2,
+          "propertyOrder": 3,
           "type": "string",
           "title": "Subject",
           "default": "Example subject",
@@ -36,7 +42,7 @@
           }
         },
         "message_body": {
-          "propertyOrder": 3,
+          "propertyOrder": 4,
           "type": "string",
           "title": "Message Body",
           "default": "Example message body.",
@@ -51,7 +57,7 @@
           "format": "checkbox",
           "description": "If checked, all tables and files in input mapping will be used as attachments.",
           "default": true,
-          "propertyOrder": 4
+          "propertyOrder": 5
         }
       }
     },
@@ -103,11 +109,33 @@
             "grid_columns": 6
           }
         },
+        "cc_email_address_column": {
+          "type": "string",
+          "title": "CC Column",
+          "description": "Optional. Column containing a comma/semicolon separated list of CC email addresses. Leave empty to not send any CC.",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 3,
+          "options": {
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
+            },
+            "grid_columns": 6,
+            "tags": true
+          }
+        },
         "subject_config": {
           "title": "Subject",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 3,
+          "propertyOrder": 4,
           "options": {
             "grid_columns": 12
           },
@@ -175,7 +203,7 @@
           "title": "Message Body",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 4,
+          "propertyOrder": 5,
           "options": {
             "grid_columns": 12
           },
@@ -331,7 +359,7 @@
           "title": "Attach Data",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 5,
+          "propertyOrder": 6,
           "options": {
             "grid_columns": 12
           }
@@ -340,7 +368,7 @@
           "title": "Data Options",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 6,
+          "propertyOrder": 7,
           "options": {
             "grid_columns": 12,
             "dependencies": {

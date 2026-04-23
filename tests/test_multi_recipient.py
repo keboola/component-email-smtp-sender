@@ -162,6 +162,39 @@ class TestBuildEmailMultiRecipient:
                 parse_multiple_recipients=True,
             )
 
+    def test_cc_header_set_when_cc_addresses_provided(self):
+        """cc_email_addresses parses into a comma-separated Cc header."""
+        client = _make_client()
+        email = client.build_email(
+            recipient_email_address="user@example.com",
+            subject="Test",
+            rendered_plaintext_message="Body",
+            cc_email_addresses="cc1@x.com; cc2@x.com, cc3@x.com",
+        )
+        assert email["To"] == "user@example.com"
+        assert email["Cc"] == "cc1@x.com, cc2@x.com, cc3@x.com"
+
+    def test_cc_header_absent_when_not_provided(self):
+        """Without cc_email_addresses the Cc header should not be present."""
+        client = _make_client()
+        email = client.build_email(
+            recipient_email_address="user@example.com",
+            subject="Test",
+            rendered_plaintext_message="Body",
+        )
+        assert email["Cc"] is None
+
+    def test_cc_whitelist_rejects_disallowed(self):
+        """CC addresses are validated against the whitelist."""
+        client = _make_client(address_whitelist=["*@allowed.com"])
+        with pytest.raises(UserException, match="does not match any of the allowed masks"):
+            client.build_email(
+                recipient_email_address="user@allowed.com",
+                subject="Test",
+                rendered_plaintext_message="Body",
+                cc_email_addresses="cc@forbidden.com",
+            )
+
     def test_from_and_subject_preserved(self):
         """From and Subject headers should be set correctly with multi-recipient."""
         client = _make_client()
@@ -250,6 +283,28 @@ class TestO365MultiRecipient:
         assert mock_message.to.add.call_count == 3
         calls = [call.args[0] for call in mock_message.to.add.call_args_list]
         assert calls == ["a@x.com", "b@x.com", "c@x.com"]
+
+    def test_cc_recipients_added_individually(self):
+        """CC header parses into individual email_.cc.add() calls on O365."""
+        client = _make_client()
+        mock_message = MagicMock()
+        mock_account = MagicMock()
+        mock_account.new_message.return_value = mock_message
+        client.smtp_server = mock_account
+
+        email = client.build_email(
+            recipient_email_address="user@example.com",
+            subject="Test",
+            rendered_plaintext_message="Body",
+            cc_email_addresses="cc1@x.com; cc2@x.com",
+        )
+
+        client.send_email_via_o365_oauth(email, message_body="Body", attachments_paths=[])
+
+        mock_message.to.add.assert_called_once_with("user@example.com")
+        assert mock_message.cc.add.call_count == 2
+        cc_calls = [call.args[0] for call in mock_message.cc.add.call_args_list]
+        assert cc_calls == ["cc1@x.com", "cc2@x.com"]
 
     def test_o365_send_called(self):
         """O365 message.send() should be called after adding recipients."""

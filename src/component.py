@@ -411,17 +411,23 @@ class Component(ComponentBase):
             except AttributeError:
                 raise UserException("No input table found with specified name or no recipient email addresses provided")
 
+        cc_email_address_column = advanced_options.cc_email_address_column
+
         for row in reader:
             try:
                 recipient_email_address = row
+                cc_email_addresses = None
                 if isinstance(reader, csv.DictReader):
                     recipient_email_address = row[advanced_options.recipient_email_address_column]
+                    if cc_email_address_column:
+                        cc_email_addresses = row.get(cc_email_address_column) or None
 
                 if not use_advanced_options:
                     rendered_subject = basic_options.subject
                     rendered_plaintext_message = basic_options.message_body
                     rendered_html_message = None
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
+                    cc_email_addresses = basic_options.cc_email_addresses
                 else:
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
@@ -494,6 +500,7 @@ class Component(ComponentBase):
                     rendered_plaintext_message=rendered_plaintext_message,
                     rendered_html_message=rendered_html_message,
                     parse_multiple_recipients=self.cfg.send_to_all_recipients,
+                    cc_email_addresses=cc_email_addresses,
                 )
 
                 status = "OK"

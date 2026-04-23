@@ -115,6 +115,7 @@ class SMTPClient:
         rendered_html_message: Union[str, None] = None,
         attachments_paths_by_filename: Dict[str, str] = None,
         parse_multiple_recipients: bool = False,
+        cc_email_addresses: Union[str, None] = None,
     ) -> MIMEMultipart:
         """
         Prepares email message including html version (if selected) and adds attachments (if they exist).
@@ -123,22 +124,35 @@ class SMTPClient:
         comma/semicolon-separated addresses and all are included in the To header as a
         comma-separated list (per RFC 2822) so a single email is sent to all recipients.
         When False (default), the string is used as-is for a single recipient.
+
+        cc_email_addresses is an optional comma/semicolon-separated string of CC recipients.
+        Parsed addresses are set in the Cc header and, if an address whitelist is configured,
+        each CC address is validated against it.
         """
         if parse_multiple_recipients:
             parsed_addresses = self._parse_recipient_addresses(recipient_email_address)
         else:
             parsed_addresses = [recipient_email_address.strip()]
 
+        parsed_cc_addresses: List[str] = []
+        if cc_email_addresses:
+            parsed_cc_addresses = self._parse_recipient_addresses(cc_email_addresses)
+
         if self.address_whitelist:
             for addr in parsed_addresses:
                 self.check_email_mask(addr)
+            for addr in parsed_cc_addresses:
+                self.check_email_mask(addr)
 
-        # Format To header as comma-separated list per RFC 2822
+        # Format To/Cc headers as comma-separated list per RFC 2822
         formatted_to = ", ".join(parsed_addresses)
+        formatted_cc = ", ".join(parsed_cc_addresses)
 
         email_ = MIMEMultipart("mixed")
         email_["From"] = self.sender_email_address
         email_["To"] = formatted_to
+        if formatted_cc:
+            email_["Cc"] = formatted_cc
         email_["Subject"] = subject
 
         email_message = MIMEMultipart("alternative")
@@ -223,6 +237,11 @@ class SMTPClient:
         # Add each recipient individually so O365/Microsoft Graph API handles them correctly
         for addr in self._parse_recipient_addresses(email["To"]):
             email_.to.add(addr)
+
+        cc_header = email["Cc"]
+        if cc_header:
+            for addr in self._parse_recipient_addresses(cc_header):
+                email_.cc.add(addr)
 
         email_.subject = email["Subject"]
         email_.body = html_message_body if html_message_body is not None else message_body

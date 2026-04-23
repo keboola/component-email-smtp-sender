@@ -34,6 +34,7 @@
 It allows user to send specific subject and message body with or without attachments to a list of recipients
 
 - **Recipient Email Addresses** - comma delimited list of email addresses
+- **CC Email Addresses** - optional, comma or semicolon delimited list of CC recipients applied to every email sent from this configuration
 - **Subject** - subject literal
 - **Message Body** - message body literal
 - **Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
@@ -45,6 +46,7 @@ It lets you choose from multiple sourcing options for subject, message body and 
 
 - **Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
 - **Recipient Email Address Column** - Recipient email address column name
+- **CC Column** - optional, column containing a comma/semicolon separated list of CC email addresses. Leave empty to not send any CC
 
 - **Subject Config**
  - **Subject Source** - `From Table`, `From Template Definition`
