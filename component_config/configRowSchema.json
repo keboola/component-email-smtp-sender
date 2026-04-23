@@ -112,7 +112,7 @@
         "cc_email_address_column": {
           "type": "string",
           "title": "CC Column",
-          "description": "Optional. Column containing a comma/semicolon separated list of CC email addresses. Leave empty to not send any CC.",
+          "description": "Optional. Column containing a comma/semicolon separated list of CC email addresses for each row. Leave empty to not use a per-row CC column.",
           "items": {
             "enum": [],
             "type": "string"
@@ -131,11 +131,20 @@
             "tags": true
           }
         },
+        "cc_email_addresses": {
+          "type": "string",
+          "title": "CC Email Addresses",
+          "description": "Optional. Comma or semicolon separated list of CC recipients applied to every email. If a CC Column is also specified, the two lists are merged and deduplicated per row.",
+          "propertyOrder": 4,
+          "options": {
+            "grid_columns": 12
+          }
+        },
         "subject_config": {
           "title": "Subject",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 4,
+          "propertyOrder": 5,
           "options": {
             "grid_columns": 12
           },
@@ -203,7 +212,7 @@
           "title": "Message Body",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 5,
+          "propertyOrder": 6,
           "options": {
             "grid_columns": 12
           },
@@ -359,7 +368,7 @@
           "title": "Attach Data",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 6,
+          "propertyOrder": 7,
           "options": {
             "grid_columns": 12
           }
@@ -368,7 +377,7 @@
           "title": "Data Options",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 7,
+          "propertyOrder": 8,
           "options": {
             "grid_columns": 12,
             "dependencies": {

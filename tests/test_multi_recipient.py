@@ -14,6 +14,7 @@ import pytest
 from keboola.component.exceptions import UserException
 
 from client import SMTPClient
+from component import Component
 
 # ==================== Helpers ====================
 
@@ -324,3 +325,30 @@ class TestO365MultiRecipient:
         client.send_email_via_o365_oauth(email, message_body="Body", attachments_paths=[])
 
         mock_message.send.assert_called_once()
+
+
+# ==================== Tests for Component._merge_cc_addresses ====================
+
+
+class TestMergeCcAddresses:
+    """Tests for Component._merge_cc_addresses static method."""
+
+    def test_no_inputs_returns_none(self):
+        assert Component._merge_cc_addresses() is None
+        assert Component._merge_cc_addresses(None) is None
+        assert Component._merge_cc_addresses("") is None
+        assert Component._merge_cc_addresses(None, None, "") is None
+
+    def test_single_list(self):
+        assert Component._merge_cc_addresses("a@x.com, b@x.com") == "a@x.com, b@x.com"
+
+    def test_merge_static_and_row(self):
+        result = Component._merge_cc_addresses("static@x.com", "row1@x.com; row2@x.com")
+        assert result == "static@x.com, row1@x.com, row2@x.com"
+
+    def test_deduplicates_case_insensitive(self):
+        result = Component._merge_cc_addresses("Shared@X.com, a@x.com", "shared@x.com; b@x.com")
+        assert result == "Shared@X.com, a@x.com, b@x.com"
+
+    def test_ignores_empty_segments(self):
+        assert Component._merge_cc_addresses(",, ;; a@x.com ; ") == "a@x.com"

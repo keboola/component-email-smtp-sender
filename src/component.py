@@ -412,15 +412,16 @@ class Component(ComponentBase):
                 raise UserException("No input table found with specified name or no recipient email addresses provided")
 
         cc_email_address_column = advanced_options.cc_email_address_column
+        advanced_static_cc = advanced_options.cc_email_addresses
 
         for row in reader:
             try:
                 recipient_email_address = row
-                cc_email_addresses = None
+                row_cc_email_addresses = None
                 if isinstance(reader, csv.DictReader):
                     recipient_email_address = row[advanced_options.recipient_email_address_column]
                     if cc_email_address_column:
-                        cc_email_addresses = row.get(cc_email_address_column) or None
+                        row_cc_email_addresses = row.get(cc_email_address_column) or None
 
                 if not use_advanced_options:
                     rendered_subject = basic_options.subject
@@ -429,6 +430,8 @@ class Component(ComponentBase):
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
                     cc_email_addresses = basic_options.cc_email_addresses
                 else:
+                    cc_email_addresses = self._merge_cc_addresses(advanced_static_cc, row_cc_email_addresses)
+
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
                         self._validate_template_text(subject_template_text, columns)
@@ -600,6 +603,30 @@ class Component(ComponentBase):
     def _read_template_file(template_path: str) -> str:
         with open(template_path) as file:
             return file.read()
+
+    @staticmethod
+    def _merge_cc_addresses(*cc_lists: Union[str, None]) -> Union[str, None]:
+        """
+        Merge one or more comma/semicolon-separated CC lists into a single comma-separated string.
+
+        Preserves order of first occurrence and deduplicates (case-insensitive).
+        Returns None when no valid addresses are found.
+        """
+        merged: List[str] = []
+        seen: Set[str] = set()
+        for cc_list in cc_lists:
+            if not cc_list:
+                continue
+            for addr in re.split(r"[,;]", cc_list):
+                addr = addr.strip()
+                if not addr:
+                    continue
+                key = addr.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(addr)
+        return ", ".join(merged) if merged else None
 
     @staticmethod
     def _parse_template_placeholders(template_text: str) -> Set[str]:

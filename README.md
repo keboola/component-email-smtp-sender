@@ -46,7 +46,8 @@ It lets you choose from multiple sourcing options for subject, message body and 
 
 - **Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
 - **Recipient Email Address Column** - Recipient email address column name
-- **CC Column** - optional, column containing a comma/semicolon separated list of CC email addresses. Leave empty to not send any CC
+- **CC Column** - optional, column containing a comma/semicolon separated list of CC email addresses for each row. Leave empty to not use a per-row CC column
+- **CC Email Addresses** - optional, comma or semicolon delimited list of CC recipients applied to every email. If a CC Column is also specified, the two lists are merged and deduplicated per row
 
 - **Subject Config**
  - **Subject Source** - `From Table`, `From Template Definition`
