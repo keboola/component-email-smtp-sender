@@ -41,6 +41,8 @@ VALID_ATTACHMENT_SOURCES = ("all_input_files", "from_table", "single_table")
 RESULT_TABLE_COLUMNS = (
     "status",
     "recipient_email_address",
+    "cc_email_addresses",
+    "bcc_email_addresses",
     "sender_email_address",
     "subject",
     "plaintext_message_body",
@@ -64,6 +66,8 @@ VALID_ATTACHMENTS_MESSAGE = "✅ All attachments are present"
 general_error_row = {
     "status": "ERROR",
     "recipient_email_address": "",
+    "cc_email_addresses": "",
+    "bcc_email_addresses": "",
     "sender_email_address": "",
     "subject": "",
     "plaintext_message_body": "",
@@ -414,14 +418,22 @@ class Component(ComponentBase):
         for row in reader:
             try:
                 recipient_email_address = row
+                cc_email_address = None
+                bcc_email_address = None
                 if isinstance(reader, csv.DictReader):
                     recipient_email_address = row[advanced_options.recipient_email_address_column]
+                    if advanced_options.cc_email_address_column:
+                        cc_email_address = row.get(advanced_options.cc_email_address_column) or None
+                    if advanced_options.bcc_email_address_column:
+                        bcc_email_address = row.get(advanced_options.bcc_email_address_column) or None
 
                 if not use_advanced_options:
                     rendered_subject = basic_options.subject
                     rendered_plaintext_message = basic_options.message_body
                     rendered_html_message = None
                     custom_attachments_paths_by_filename = attachments_paths_by_filename
+                    cc_email_address = basic_options.cc_email_addresses or None
+                    bcc_email_address = basic_options.bcc_email_addresses or None
                 else:
                     if subject_column is not None:
                         subject_template_text = row[subject_column]
@@ -494,15 +506,19 @@ class Component(ComponentBase):
                     rendered_plaintext_message=rendered_plaintext_message,
                     rendered_html_message=rendered_html_message,
                     parse_multiple_recipients=self.cfg.send_to_all_recipients,
+                    cc_email_address=cc_email_address,
+                    bcc_email_address=bcc_email_address,
                 )
 
                 status = "OK"
                 error_message = ""
                 if not dry_run:
                     try:
+                        cc_log = f" cc=`{email_['Cc']}`" if email_["Cc"] else ""
+                        bcc_log = f" bcc=`{email_['Bcc']}`" if email_["Bcc"] else ""
                         logging.info(
                             f"Sending email with subject: `{email_['Subject']}`"
-                            f" from `{email_['From']}` to `{email_['To']}`"
+                            f" from `{email_['From']}` to `{email_['To']}`{cc_log}{bcc_log}"
                         )
 
                         if not self.cfg.advanced_options.include_attachments or self._client.disable_attachments:
@@ -536,6 +552,8 @@ class Component(ComponentBase):
                     dict(
                         status=status,
                         recipient_email_address=email_["To"],
+                        cc_email_addresses=email_["Cc"] or "",
+                        bcc_email_addresses=email_["Bcc"] or "",
                         sender_email_address=email_["From"],
                         subject=email_["Subject"],
                         plaintext_message_body=rendered_plaintext_message,

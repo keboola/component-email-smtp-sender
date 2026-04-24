@@ -18,12 +18,28 @@
       "options": {"dependencies": {"configuration_type": "basic"}},
       "properties": {
         "recipient_email_addresses": {
-          "title": "Recipient Email Addresses",
+          "title": "Recipient Email Addresses (To)",
           "type": "string",
           "options": {
             "tooltip": "Enter one or more email addresses separated by commas or semicolons.\nUse the **Send to All Recipients** checkbox to control whether they receive one shared email or individual separate emails."
           },
           "propertyOrder": 1
+        },
+        "cc_email_addresses": {
+          "title": "CC Email Addresses",
+          "type": "string",
+          "options": {
+            "tooltip": "Enter one or more CC email addresses separated by commas or semicolons. These recipients will receive a copy of the email and will be visible to all other recipients."
+          },
+          "propertyOrder": 1.1
+        },
+        "bcc_email_addresses": {
+          "title": "BCC Email Addresses",
+          "type": "string",
+          "options": {
+            "tooltip": "Enter one or more BCC email addresses separated by commas or semicolons. These recipients will receive a copy of the email but will not be visible to other recipients."
+          },
+          "propertyOrder": 1.2
         },
         "subject": {
           "propertyOrder": 2,
@@ -85,7 +101,7 @@
         },
         "recipient_email_address_column": {
           "type": "string",
-          "title": "Recipient Column",
+          "title": "Recipient Column (To)",
           "items": {
             "enum": [],
             "type": "string"
@@ -100,7 +116,51 @@
               "action": "load_input_table_columns",
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
-            "grid_columns": 6
+            "grid_columns": 4
+          }
+        },
+        "cc_email_address_column": {
+          "type": "string",
+          "title": "CC Column",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 2.1,
+          "options": {
+            "tags": true,
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
+            },
+            "grid_columns": 4,
+            "tooltip": "Optional column containing CC email addresses (comma or semicolon separated). Recipients will be visible to all."
+          }
+        },
+        "bcc_email_address_column": {
+          "type": "string",
+          "title": "BCC Column",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 2.2,
+          "options": {
+            "tags": true,
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
+            },
+            "grid_columns": 4,
+            "tooltip": "Optional column containing BCC email addresses (comma or semicolon separated). Recipients will not be visible to others."
           }
         },
         "subject_config": {
