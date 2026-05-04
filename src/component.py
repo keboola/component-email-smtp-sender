@@ -217,6 +217,15 @@ class Component(ComponentBase):
         Should be called after configuration is loaded and before actual work begins.
         Skips validation for basic mode.
         """
+        if not self.cfg.send_to_all_recipients:
+            has_cc = self.cfg.basic_options.cc_email_addresses or self.cfg.advanced_options.cc_email_address_column
+            has_bcc = self.cfg.basic_options.bcc_email_addresses or self.cfg.advanced_options.bcc_email_address_column
+            if has_cc or has_bcc:
+                raise UserException(
+                    "Cc and Bcc are only available when 'Send as Single Email' is enabled. "
+                    "Either enable single-email mode or remove Cc/Bcc from the configuration."
+                )
+
         # Skip validation in basic mode
         if self.cfg.configuration_type == "basic":
             return

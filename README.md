@@ -34,8 +34,8 @@
 It allows user to send specific subject and message body with or without attachments to a list of recipients
 
 - **Recipient Email Addresses (To)** - comma delimited list of email addresses
-- **CC Email Addresses** - (optional) comma delimited list of CC email addresses
-- **BCC Email Addresses** - (optional) comma delimited list of BCC email addresses
+- **Cc Email Addresses** - (optional) comma delimited list of Cc email addresses
+- **Bcc Email Addresses** - (optional) comma delimited list of Bcc email addresses
 - **Subject** - subject literal
 - **Message Body** - message body literal
 - **Include Attachments** - checkbox indicating, whether to attach files and table in input mapping
@@ -47,8 +47,8 @@ It lets you choose from multiple sourcing options for subject, message body and 
 
 - **Email Data Table Name** - dynamically loaded selection of the table containing recipient email addresses, subject and message body template placeholder values and custom attachment filenames (if selected)
 - **Recipient Email Address Column (To)** - Recipient email address column name
-- **CC Column** - (optional) Column containing CC email addresses (comma or semicolon separated)
-- **BCC Column** - (optional) Column containing BCC email addresses (comma or semicolon separated)
+- **Cc Column** - (optional) Column containing Cc email addresses (comma or semicolon separated)
+- **Bcc Column** - (optional) Column containing Bcc email addresses (comma or semicolon separated)
 
 - **Subject Config**
  - **Subject Source** - `From Table`, `From Template Definition`
@@ -103,8 +103,8 @@ It lets you choose from multiple sourcing options for subject, message body and 
  
  - `status` - `OK` or `ERROR`
  - `recipient_email_address` - recipient_email_address
- - `cc_email_addresses` - CC email addresses (if configured)
- - `bcc_email_addresses` - BCC email addresses (if configured)
+ - `cc_email_addresses` - Cc email addresses (if configured)
+ - `bcc_email_addresses` - Bcc email addresses (if configured)
  - `sender_email_address` - sender_email_address
  - `subject` - subject
  - `plaintext_message_body` - plaintext_message_body

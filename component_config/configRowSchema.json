@@ -36,19 +36,19 @@
           "propertyOrder": 1
         },
         "cc_email_addresses": {
-          "title": "CC Email Addresses",
+          "title": "Cc Email Addresses",
           "type": "string",
           "options": {
-            "tooltip": "Enter one or more CC email addresses separated by commas or semicolons. These recipients will receive a copy of the email and will be visible to all other recipients.",
+            "tooltip": "Enter one or more Cc email addresses separated by commas or semicolons. These recipients will receive a copy of the email and will be visible to all other recipients.",
             "dependencies": {"send_to_all_recipients": true}
           },
           "propertyOrder": 2
         },
         "bcc_email_addresses": {
-          "title": "BCC Email Addresses",
+          "title": "Bcc Email Addresses",
           "type": "string",
           "options": {
-            "tooltip": "Enter one or more BCC email addresses separated by commas or semicolons. BCC recipients are hidden from To and CC recipients by the mail server.",
+            "tooltip": "Enter one or more Bcc email addresses separated by commas or semicolons. Bcc recipients are hidden from To and Cc recipients by the mail server.",
             "dependencies": {"send_to_all_recipients": true}
           },
           "propertyOrder": 3
@@ -113,7 +113,7 @@
         },
         "cc_email_address_column": {
           "type": "string",
-          "title": "CC Column",
+          "title": "Cc Column",
           "items": {
             "enum": [],
             "type": "string"
@@ -129,7 +129,7 @@
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
             "grid_columns": 6,
-            "tooltip": "Optional column containing CC email addresses (comma or semicolon separated). Recipients will be visible to all.",
+            "tooltip": "Optional column containing Cc email addresses (comma or semicolon separated). Recipients will be visible to all.",
             "dependencies": {"send_to_all_recipients": true}
           }
         },
@@ -155,7 +155,7 @@
         },
         "bcc_email_address_column": {
           "type": "string",
-          "title": "BCC Column",
+          "title": "Bcc Column",
           "items": {
             "enum": [],
             "type": "string"
@@ -171,7 +171,7 @@
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
             "grid_columns": 6,
-            "tooltip": "Optional column containing BCC email addresses (comma or semicolon separated). BCC recipients are hidden from To and CC recipients by the mail server.",
+            "tooltip": "Optional column containing Bcc email addresses (comma or semicolon separated). Bcc recipients are hidden from To and Cc recipients by the mail server.",
             "dependencies": {"send_to_all_recipients": true}
           }
         },
