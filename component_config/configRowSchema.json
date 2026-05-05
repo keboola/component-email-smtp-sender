@@ -2,11 +2,21 @@
   "type": "object",
   "title": "SMTP sender configuration",
   "properties": {
+    "send_to_all_recipients": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Send as Single Email (enables Cc and Bcc fields)",
+      "default": false,
+      "propertyOrder": 1,
+      "options": {
+        "tooltip": "When checked, all To addresses are grouped into a single email — Cc and Bcc fields become available, working just like composing a message in Outlook. When unchecked (default), each To address receives its own individual email."
+      }
+    },
     "configuration_type": {
       "title": "Configuration Type",
       "type": "string",
       "enum": ["basic", "advanced"],
-      "propertyOrder": 1,
+      "propertyOrder": 2,
       "options": {
         "enum_titles": ["Basic", "Advanced"]
       }
@@ -14,19 +24,37 @@
     "basic_options": {
       "title": "Basic Options",
       "type": "object",
-      "propertyOrder": 2,
+      "propertyOrder": 3,
       "options": {"dependencies": {"configuration_type": "basic"}},
       "properties": {
         "recipient_email_addresses": {
-          "title": "Recipient Email Addresses",
+          "title": "Recipient Email Addresses (To)",
           "type": "string",
           "options": {
-            "tooltip": "Enter one or more email addresses separated by commas or semicolons.\nUse the **Send to All Recipients** checkbox to control whether they receive one shared email or individual separate emails."
+            "tooltip": "Enter one or more email addresses separated by commas or semicolons.\nUse the **Send as Single Email** checkbox to control whether they receive one shared email or individual separate emails."
           },
           "propertyOrder": 1
         },
+        "cc_email_addresses": {
+          "title": "Cc Email Addresses",
+          "type": "string",
+          "options": {
+            "tooltip": "Enter one or more Cc email addresses separated by commas or semicolons. These recipients will receive a copy of the email and will be visible to all other recipients.",
+            "dependencies": {"send_to_all_recipients": true}
+          },
+          "propertyOrder": 2
+        },
+        "bcc_email_addresses": {
+          "title": "Bcc Email Addresses",
+          "type": "string",
+          "options": {
+            "tooltip": "Enter one or more Bcc email addresses separated by commas or semicolons. Bcc recipients are hidden from To and Cc recipients by the mail server.",
+            "dependencies": {"send_to_all_recipients": true}
+          },
+          "propertyOrder": 3
+        },
         "subject": {
-          "propertyOrder": 2,
+          "propertyOrder": 4,
           "type": "string",
           "title": "Subject",
           "default": "Example subject",
@@ -36,7 +64,7 @@
           }
         },
         "message_body": {
-          "propertyOrder": 3,
+          "propertyOrder": 5,
           "type": "string",
           "title": "Message Body",
           "default": "Example message body.",
@@ -51,7 +79,7 @@
           "format": "checkbox",
           "description": "If checked, all tables and files in input mapping will be used as attachments.",
           "default": true,
-          "propertyOrder": 4
+          "propertyOrder": 6
         }
       }
     },
@@ -59,7 +87,7 @@
       "title": "Advanced Options",
       "type": "object",
       "format": "grid-strict",
-      "propertyOrder": 3,
+      "propertyOrder": 4,
       "options": {"dependencies": {"configuration_type": "advanced"}},
       "properties": {
         "email_data_table_name": {
@@ -83,9 +111,9 @@
             "tooltip": "Name of the table with recipient email addresses, placeholders, and other columns depending on your configuration."
           }
         },
-        "recipient_email_address_column": {
+        "cc_email_address_column": {
           "type": "string",
-          "title": "Recipient Column",
+          "title": "Cc Column",
           "items": {
             "enum": [],
             "type": "string"
@@ -100,14 +128,58 @@
               "action": "load_input_table_columns",
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
+            "grid_columns": 6,
+            "tooltip": "Optional column containing Cc email addresses (comma or semicolon separated). Recipients will be visible to all.",
+            "dependencies": {"send_to_all_recipients": true}
+          }
+        },
+        "recipient_email_address_column": {
+          "type": "string",
+          "title": "Recipient Column (To)",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 3,
+          "options": {
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
+            },
             "grid_columns": 6
+          }
+        },
+        "bcc_email_address_column": {
+          "type": "string",
+          "title": "Bcc Column",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "enum": [],
+          "format": "select",
+          "uniqueItems": true,
+          "propertyOrder": 4,
+          "options": {
+            "async": {
+              "label": "Re-load columns",
+              "action": "load_input_table_columns",
+              "autoload": ["parameters.advanced_options.email_data_table_name"]
+            },
+            "grid_columns": 6,
+            "tooltip": "Optional column containing Bcc email addresses (comma or semicolon separated). Bcc recipients are hidden from To and Cc recipients by the mail server.",
+            "dependencies": {"send_to_all_recipients": true}
           }
         },
         "subject_config": {
           "title": "Subject",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 3,
+          "propertyOrder": 5,
           "options": {
             "grid_columns": 12
           },
@@ -175,7 +247,7 @@
           "title": "Message Body",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 4,
+          "propertyOrder": 6,
           "options": {
             "grid_columns": 12
           },
@@ -331,7 +403,7 @@
           "title": "Attach Data",
           "format": "checkbox",
           "default": true,
-          "propertyOrder": 5,
+          "propertyOrder": 7,
           "options": {
             "grid_columns": 12
           }
@@ -340,7 +412,7 @@
           "title": "Data Options",
           "type": "object",
           "format": "grid-strict",
-          "propertyOrder": 6,
+          "propertyOrder": 8,
           "options": {
             "grid_columns": 12,
             "dependencies": {
@@ -538,14 +610,6 @@
           }
         }
       }
-    },
-    "send_to_all_recipients": {
-      "type": "boolean",
-      "format": "checkbox",
-      "title": "Send to All Recipients in Single Email",
-      "description": "If checked, all recipient addresses (separated by commas or semicolons) are grouped into a single email with all recipients visible in the To field. If unchecked (default), each address receives its own separate email.",
-      "default": false,
-      "propertyOrder": 6
     },
     "dry_run": {
       "type": "boolean",

@@ -395,6 +395,80 @@ class TestValidateRunConfiguration:
         component.cfg = Configuration.load_from_dict(make_advanced_config(advanced_options=advanced_options))
         component._validate_run_configuration()  # must not raise
 
+    @pytest.mark.parametrize(
+        "config",
+        [
+            pytest.param(
+                make_advanced_config(
+                    send_to_all_recipients=False,
+                    advanced_options={"cc_email_address_column": "Cc"},
+                ),
+                id="advanced_cc_without_single_email",
+            ),
+            pytest.param(
+                make_advanced_config(
+                    send_to_all_recipients=False,
+                    advanced_options={"bcc_email_address_column": "Bcc"},
+                ),
+                id="advanced_bcc_without_single_email",
+            ),
+            pytest.param(
+                {
+                    "configuration_type": "basic",
+                    "send_to_all_recipients": False,
+                    "basic_options": {"cc_email_addresses": "cc@example.com"},
+                    "connection_config": {
+                        "use_oauth": False,
+                        "creds_config": {"sender_email_address": "s@s.com", "server_host": "h", "server_port": 25},
+                    },
+                },
+                id="basic_cc_without_single_email",
+            ),
+            pytest.param(
+                {
+                    "configuration_type": "basic",
+                    "send_to_all_recipients": False,
+                    "basic_options": {"bcc_email_addresses": "bcc@example.com"},
+                    "connection_config": {
+                        "use_oauth": False,
+                        "creds_config": {"sender_email_address": "s@s.com", "server_host": "h", "server_port": 25},
+                    },
+                },
+                id="basic_bcc_without_single_email",
+            ),
+        ],
+    )
+    def test_cc_bcc_without_single_email_raises(self, component, config):
+        """Cc/Bcc fields set while send_to_all_recipients is False must raise UserException."""
+        component.cfg = Configuration.load_from_dict(config)
+        with pytest.raises(UserException, match="Cc and Bcc are only available when 'Send as Single Email' is enabled"):
+            component._validate_run_configuration()
+
+    @pytest.mark.parametrize(
+        "config",
+        [
+            pytest.param(
+                make_advanced_config(send_to_all_recipients=False),
+                id="advanced_no_cc_bcc",
+            ),
+            pytest.param(
+                make_advanced_config(
+                    send_to_all_recipients=True,
+                    advanced_options={"cc_email_address_column": "Cc", "bcc_email_address_column": "Bcc"},
+                ),
+                id="advanced_cc_bcc_with_single_email",
+            ),
+            pytest.param(
+                make_advanced_config(configuration_type="basic"),
+                id="basic_no_cc_bcc",
+            ),
+        ],
+    )
+    def test_cc_bcc_guard_does_not_raise(self, component, config):
+        """Guard must not raise for valid combinations (no Cc/Bcc, or single-email mode enabled)."""
+        component.cfg = Configuration.load_from_dict(config)
+        component._validate_run_configuration()  # must not raise
+
 
 # ==================== Tests for _resolve_data_source_table_path() ====================
 
