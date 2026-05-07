@@ -1,3 +1,4 @@
+import copy
 import csv
 import json
 import logging
@@ -33,6 +34,7 @@ KEY_HTML_TEMPLATE_DEFINITION = "html_template_definition"
 KEY_ALLOWED_HOSTS = "allowed_hosts"
 KEY_ADDRESS_WHITELIST = "address_whitelist"
 KEY_DISABLE_ATTACHMENTS = "disable_attachments"
+KEY_GLOBAL_CONFIG = "global_config"
 
 SLEEP_INTERVAL = 0.1
 
@@ -209,7 +211,9 @@ class Component(ComponentBase):
 
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
-        self.cfg: Configuration = Configuration.load_from_dict(self.configuration.parameters)
+        parameters = copy.deepcopy(self.configuration.parameters or {})
+        self.apply_global_config(parameters)
+        self.cfg: Configuration = Configuration.load_from_dict(parameters)
 
     def _validate_run_configuration(self) -> None:
         """
@@ -332,6 +336,42 @@ class Component(ComponentBase):
 
             if not match:
                 raise UserException(f"Host {creds_config.server_host}:{creds_config.server_port} is not allowed")
+
+    def apply_global_config(self, parameters: dict) -> None:
+        """Merge required values from image_parameters.global_config into the user parameters dict.
+
+        The Keboola UI displays global_config values as if they were part of the user's
+        configuration, but they are not actually written to the stored config when the user
+        saves the form. Without this merge, the component would see fields missing or
+        different from what the UI displayed. We do the merge here so the component matches
+        what the user saw. Fields missing from the user configuration are filled silently.
+        If the user explicitly set a different value, a UserException is raised — locked
+        values cannot be overridden.
+        """
+        image_parameters = self.configuration.image_parameters or {}
+        global_config = image_parameters.get(KEY_GLOBAL_CONFIG)
+        if not isinstance(global_config, dict):
+            return
+
+        self._apply_required_values(global_config, parameters, "")
+
+    @staticmethod
+    def _apply_required_values(required: dict, target: dict, path: str) -> None:
+        for key, required_value in required.items():
+            sub_path = f"{path}.{key}" if path else key
+            if isinstance(required_value, dict):
+                if not isinstance(target.get(key), dict):
+                    target[key] = {}
+                Component._apply_required_values(required_value, target[key], sub_path)
+            else:
+                existing = target.get(key)
+                if existing is None:
+                    target[key] = required_value
+                elif existing != required_value:
+                    raise UserException(
+                        f"Field '{sub_path}' is centrally managed by your stack and "
+                        f"cannot be overridden in your configuration."
+                    )
 
     @staticmethod
     def load_email_data_table_path(in_tables, email_data_table_name):

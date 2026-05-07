@@ -15,6 +15,7 @@ Tests cover:
 - _parse_template_placeholders() static method
 """
 
+import copy
 import shutil
 import tempfile
 from contextlib import contextmanager
@@ -1569,3 +1570,123 @@ class TestValidateConfig:
             comp.validate_single_table_.assert_called_once()
         else:
             comp.validate_single_table_.assert_not_called()
+
+
+# ==================== apply_global_config tests ====================
+
+
+class TestApplyGlobalConfig:
+    """Tests for apply_global_config() method."""
+
+    @staticmethod
+    @contextmanager
+    def _make_component(image_parameters: dict | None = None):
+        comp = Component.__new__(Component)
+
+        mock_config = MagicMock()
+        mock_config.image_parameters = image_parameters
+
+        with patch.object(type(comp), "configuration", new_callable=PropertyMock) as mock_conf_prop:
+            mock_conf_prop.return_value = mock_config
+            yield comp
+
+    def test_no_global_config(self):
+        """No global_config in image_parameters — parameters unchanged."""
+        params = make_advanced_config()
+        original = copy.deepcopy(params)
+        with self._make_component(image_parameters={}) as comp:
+            comp.apply_global_config(params)
+        assert params == original
+
+    def test_empty_global_config(self):
+        """Empty global_config — parameters unchanged."""
+        params = make_advanced_config()
+        original = copy.deepcopy(params)
+        with self._make_component(image_parameters={"global_config": {}}) as comp:
+            comp.apply_global_config(params)
+        assert params == original
+
+    def test_no_image_parameters(self):
+        """image_parameters is None — parameters unchanged."""
+        params = make_advanced_config()
+        original = copy.deepcopy(params)
+        with self._make_component(image_parameters=None) as comp:
+            comp.apply_global_config(params)
+        assert params == original
+
+    def test_use_oauth_matches(self):
+        """use_oauth matches global_config — no-op, no exception."""
+        params = make_advanced_config()
+        with self._make_component(
+            image_parameters={"global_config": {"connection_config": {"use_oauth": False}}},
+        ) as comp:
+            comp.apply_global_config(params)
+        assert params["connection_config"]["use_oauth"] is False
+
+    def test_use_oauth_mismatch_raises(self):
+        """use_oauth differs from global_config — UserException raised."""
+        params = make_advanced_config(connection_config={"use_oauth": True})
+        with self._make_component(
+            image_parameters={"global_config": {"connection_config": {"use_oauth": False}}},
+        ) as comp:
+            with pytest.raises(UserException, match="connection_config.use_oauth.*centrally managed"):
+                comp.apply_global_config(params)
+
+    def test_missing_field_filled_silently(self):
+        """User config missing the locked field — filled in, no exception."""
+        params = make_advanced_config()
+        params["connection_config"]["creds_config"].pop("sender_email_address", None)
+        with self._make_component(
+            image_parameters={
+                "global_config": {"connection_config": {"creds_config": {"sender_email_address": "locked@example.com"}}}
+            },
+        ) as comp:
+            comp.apply_global_config(params)
+        assert params["connection_config"]["creds_config"]["sender_email_address"] == "locked@example.com"
+
+    def test_sender_email_mismatch_raises(self):
+        """sender_email_address differs — UserException raised."""
+        params = make_advanced_config(connection_config={"creds_config": {"sender_email_address": "other@example.com"}})
+        with self._make_component(
+            image_parameters={
+                "global_config": {"connection_config": {"creds_config": {"sender_email_address": "locked@example.com"}}}
+            },
+        ) as comp:
+            with pytest.raises(
+                UserException, match="connection_config.creds_config.sender_email_address.*centrally managed"
+            ):
+                comp.apply_global_config(params)
+
+    def test_first_mismatch_raises_when_other_fields_match(self):
+        """When several fields are locked and only one mismatches — that field's UserException is raised."""
+        params = make_advanced_config(
+            connection_config={
+                "use_oauth": False,
+                "creds_config": {
+                    "sender_email_address": "locked@example.com",
+                    "server_host": "wrong-host.com",
+                },
+            }
+        )
+        with self._make_component(
+            image_parameters={
+                "global_config": {
+                    "connection_config": {
+                        "use_oauth": False,
+                        "creds_config": {
+                            "sender_email_address": "locked@example.com",
+                            "server_host": "correct-host.com",
+                        },
+                    }
+                }
+            },
+        ) as comp:
+            with pytest.raises(UserException, match="connection_config.creds_config.server_host.*centrally managed"):
+                comp.apply_global_config(params)
+
+    def test_top_level_field_mismatch_raises(self):
+        """Top-level field locked and user value differs — UserException raised."""
+        params = make_advanced_config(dry_run=False)
+        with self._make_component(image_parameters={"global_config": {"dry_run": True}}) as comp:
+            with pytest.raises(UserException, match="dry_run.*centrally managed"):
+                comp.apply_global_config(params)
