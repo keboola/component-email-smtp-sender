@@ -924,9 +924,8 @@ class Component(ComponentBase):
         self._client.smtp_server.close()
 
     def test_smtp_server_connection_(self) -> ValidationResult:
-        connection_config = ConnectionConfig.load_from_dict(self.configuration.parameters["connection_config"])
         try:
-            self.init_client(connection_config=connection_config)
+            self.init_client()
             return ValidationResult("✅ Connection established successfully", MessageType.SUCCESS)
         except Exception as e:
             return ValidationResult(f"❌ Connection couldn't be established. Error: {e}", MessageType.DANGER)
