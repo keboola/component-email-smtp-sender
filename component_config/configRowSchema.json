@@ -111,9 +111,9 @@
             "tooltip": "Name of the table with recipient email addresses, placeholders, and other columns depending on your configuration."
           }
         },
-        "cc_email_address_column": {
+        "recipient_email_address_column": {
           "type": "string",
-          "title": "Cc Column",
+          "title": "Recipient Column (To)",
           "items": {
             "enum": [],
             "type": "string"
@@ -128,14 +128,12 @@
               "action": "load_input_table_columns",
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
-            "grid_columns": 6,
-            "tooltip": "Optional column containing Cc email addresses (comma or semicolon separated). Recipients will be visible to all.",
-            "dependencies": {"send_to_all_recipients": true}
+            "grid_columns": 6
           }
         },
-        "recipient_email_address_column": {
+        "cc_email_address_column": {
           "type": "string",
-          "title": "Recipient Column (To)",
+          "title": "Cc Column",
           "items": {
             "enum": [],
             "type": "string"
@@ -150,7 +148,9 @@
               "action": "load_input_table_columns",
               "autoload": ["parameters.advanced_options.email_data_table_name"]
             },
-            "grid_columns": 6
+            "grid_columns": 6,
+            "tooltip": "Optional column containing Cc email addresses (comma or semicolon separated). Recipients will be visible to all.",
+            "dependencies": {"send_to_all_recipients": true}
           }
         },
         "bcc_email_address_column": {
