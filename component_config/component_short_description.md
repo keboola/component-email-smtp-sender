@@ -1,1 +1,1 @@
-SMTP (Simple Mail Transfer Protocol) is the backbone of email communication, enabling the transfer of messages between servers and ensuring reliable email delivery across networks.
+Sends templated emails with attachments via SMTP or Microsoft 365.
