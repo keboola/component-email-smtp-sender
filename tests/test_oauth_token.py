@@ -43,3 +43,20 @@ def test_init_o365_smtp_server_raises_user_exception_on_invalid_client():
             client.init_smtp_server()
 
     assert "invalid_client" in str(exc_info.value)
+
+
+def test_init_o365_smtp_server_message_is_clean_without_error_description():
+    """When MSAL omits error_description, the message must not contain dangling punctuation."""
+    client = _make_oauth_client()
+
+    with patch("client.msal.ConfidentialClientApplication") as mock_app_cls:
+        mock_app = MagicMock()
+        mock_app.acquire_token_for_client.return_value = {"error": "invalid_client"}
+        mock_app_cls.return_value = mock_app
+
+        with pytest.raises(UserException) as exc_info:
+            client.init_smtp_server()
+
+    message = str(exc_info.value)
+    assert "invalid_client" in message
+    assert " - ." not in message

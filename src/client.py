@@ -213,9 +213,12 @@ class SMTPClient:
             result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
             if "access_token" in result:
                 return result
+            error_detail = result.get("error") or "unknown error"
+            error_description = result.get("error_description")
+            if error_description:
+                error_detail = f"{error_detail} - {error_description}"
             raise UserException(
-                f"Failed to acquire O365 OAuth access token: {result.get('error')} - "
-                f"{result.get('error_description', '')}. "
+                f"Failed to acquire O365 OAuth access token: {error_detail}. "
                 "Check the OAuth client ID, client secret and tenant ID in the component configuration."
             )
 
