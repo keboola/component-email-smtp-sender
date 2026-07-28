@@ -419,6 +419,8 @@ class Component(ComponentBase):
     ) -> None:
         continue_on_error = self.cfg.continue_on_error
         dry_run = self.cfg.dry_run
+        ok_count = 0
+        error_count = 0
         use_advanced_options = self.cfg.configuration_type == "advanced"
         basic_options = self.cfg.basic_options
         advanced_options = self.cfg.advanced_options
@@ -581,11 +583,15 @@ class Component(ComponentBase):
                             html_message_body=rendered_html_message,
                             attachments_paths=attachment_paths,
                         )
+                        logging.info(f"Email sent successfully to {email_['To']}")
+                        ok_count += 1
 
                     except Exception as e:
                         error_message = str(e)
                         status = "ERROR"
                         self._results_writer.errors = True
+                        logging.warning(f"Failed to send email to {email_['To']}: {error_message}")
+                        error_count += 1
 
                 rendered_html_message_writable = ""
                 if rendered_html_message:
@@ -616,6 +622,8 @@ class Component(ComponentBase):
                 time.sleep(SLEEP_INTERVAL)
 
             except Exception as e:
+                logging.warning(f"Failed to process row for recipient {recipient_email_address}: {e}")
+                error_count += 1
                 self._results_writer.writerow(
                     {
                         **general_error_row,
@@ -628,6 +636,7 @@ class Component(ComponentBase):
                 if not continue_on_error:
                     break
 
+        logging.info(f"Email send loop complete: {ok_count} sent, {error_count} failed")
         try:
             in_table.close()
         except NameError:
